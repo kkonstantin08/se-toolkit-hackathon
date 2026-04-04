@@ -1,0 +1,193 @@
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { addDays, subDays } from "date-fns";
+import { Plus, Wand2 } from "lucide-react";
+import { startTransition, useMemo, useState } from "react";
+
+import { queryClient } from "../app/query-client";
+import { Button } from "../components/ui/forms";
+import { ParsePanel } from "../features/ai-parser/parse-panel";
+import { ItemModal } from "../features/items/item-modal";
+import { WeeklyPlanner } from "../features/planner/weekly-planner";
+import { ReminderCenter } from "../features/reminders/reminder-center";
+import { api } from "../lib/api/client";
+import { formatWeekRange, getWeekStart, toApiDate } from "../lib/utils/datetime";
+import type { ItemPayload, PlannerOccurrence } from "../types/api";
+
+export function PlannerPage() {
+  const [weekDate, setWeekDate] = useState(() => getWeekStart(new Date()));
+  const [modalState, setModalState] = useState<{ mode: "create" | "edit"; item?: PlannerOccurrence } | null>(null);
+  const weekKey = toApiDate(weekDate);
+
+  const googleStatusQuery = useQuery({
+    queryKey: ["google-status"],
+    queryFn: api.googleStatus,
+  });
+
+  const weekQuery = useQuery({
+    queryKey: ["week", weekKey],
+    queryFn: () => api.week(weekKey),
+  });
+
+  const invalidatePlanner = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["week"] });
+    await queryClient.invalidateQueries({ queryKey: ["due-reminders"] });
+  };
+
+  const createMutation = useMutation({
+    mutationFn: api.createItem,
+    onSuccess: async () => {
+      setModalState(null);
+      await invalidatePlanner();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ itemId, payload }: { itemId: string; payload: Partial<ItemPayload> }) => api.updateItem(itemId, payload),
+    onSuccess: async () => {
+      setModalState(null);
+      await invalidatePlanner();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: api.deleteItem,
+    onSuccess: invalidatePlanner,
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: api.googleSyncItem,
+    onSuccess: invalidatePlanner,
+  });
+
+  const googleSyncEnabled = Boolean(googleStatusQuery.data?.configured && googleStatusQuery.data?.connected);
+  const googleSyncHint = !googleStatusQuery.data?.configured
+    ? "Google Calendar не настроен в .env"
+    : !googleStatusQuery.data?.connected
+      ? "Сначала подключите Google Calendar на странице интеграций"
+      : "Повторить синхронизацию события с Google Calendar";
+
+  const toggleCompleteMutation = useMutation({
+    mutationFn: (item: PlannerOccurrence) =>
+      item.completed_for_occurrence ? api.uncompleteItem(item.id, item.occurrence_date) : api.completeItem(item.id, item.occurrence_date),
+    onSuccess: invalidatePlanner,
+  });
+
+  const stats = useMemo(() => {
+    const items = weekQuery.data?.items ?? [];
+    return {
+      total: items.length,
+      tasks: items.filter((item) => item.item_type === "task").length,
+      events: items.filter((item) => item.item_type === "event").length,
+      completed: items.filter((item) => item.completed_for_occurrence).length,
+    };
+  }, [weekQuery.data]);
+
+  const weekData = weekQuery.data;
+
+  return (
+    <div className="grid gap-6">
+      <section className="grid gap-4 rounded-[2rem] bg-white/80 p-5 shadow-soft lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="text-sm uppercase tracking-[0.2em] text-slate-500">Weekly planner</div>
+              <h2 className="text-3xl font-semibold text-ink">{formatWeekRange(weekDate)}</h2>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button variant="secondary" onClick={() => startTransition(() => setWeekDate((current) => subDays(current, 7)))}>
+                Предыдущая неделя
+              </Button>
+              <Button variant="secondary" onClick={() => startTransition(() => setWeekDate((current) => addDays(current, 7)))}>
+                Следующая неделя
+              </Button>
+              <Button className="gap-2" onClick={() => setModalState({ mode: "create" })}>
+                <Plus className="size-4" />
+                Создать
+              </Button>
+            </div>
+          </div>
+          <div className="grid gap-3 md:grid-cols-4">
+            <div className="rounded-3xl bg-sand px-4 py-3">
+              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Всего</div>
+              <div className="mt-2 text-2xl font-semibold text-ink">{stats.total}</div>
+            </div>
+            <div className="rounded-3xl bg-sand px-4 py-3">
+              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Задачи</div>
+              <div className="mt-2 text-2xl font-semibold text-ink">{stats.tasks}</div>
+            </div>
+            <div className="rounded-3xl bg-sand px-4 py-3">
+              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">События</div>
+              <div className="mt-2 text-2xl font-semibold text-ink">{stats.events}</div>
+            </div>
+            <div className="rounded-3xl bg-sand px-4 py-3">
+              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Выполнено</div>
+              <div className="mt-2 text-2xl font-semibold text-ink">{stats.completed}</div>
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-4">
+          <ParsePanel />
+          <div className="rounded-[2rem] bg-mist/80 p-5">
+            <div className="flex items-center gap-3 text-ink">
+              <Wand2 className="size-5 text-coral" />
+              <div className="font-semibold">Manual-first режим</div>
+            </div>
+            <p className="mt-3 text-sm text-slate-600">Даже если Mistral или Google Calendar не настроены, весь основной flow остаётся доступным: ручное создание, повторения, напоминания и недельный обзор.</p>
+          </div>
+        </div>
+      </section>
+
+      {weekQuery.isLoading ? (
+        <div className="rounded-[2rem] bg-white/80 p-10 text-center text-slate-500 shadow-soft">Собираем неделю...</div>
+      ) : weekQuery.isError ? (
+        <div className="rounded-[2rem] bg-white/80 p-10 text-center text-red-500 shadow-soft">{weekQuery.error.message}</div>
+      ) : weekData ? (
+        <div className="grid gap-4">
+          {!googleStatusQuery.data?.configured ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              Google Calendar пока не настроен в `.env`, поэтому автоматическая синхронизация событий отключена.
+            </div>
+          ) : !googleStatusQuery.data?.connected ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              Google Calendar ещё не подключён для этого аккаунта. После подключения события будут синхронизироваться автоматически.
+            </div>
+          ) : null}
+
+          {syncMutation.isError ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {syncMutation.error.message}. Для событий со статусом `failed` доступна кнопка повторной синхронизации.
+            </div>
+          ) : null}
+
+          <WeeklyPlanner
+            startOfWeek={weekData.start_of_week}
+            items={weekData.items}
+            onEdit={(item) => setModalState({ mode: "edit", item })}
+            onDelete={(item) => deleteMutation.mutate(item.id)}
+            onToggleComplete={(item) => toggleCompleteMutation.mutate(item)}
+            onSync={(item) => syncMutation.mutate(item.id)}
+            googleSyncEnabled={googleSyncEnabled}
+            googleSyncHint={googleSyncHint}
+          />
+        </div>
+      ) : null}
+
+      <ItemModal
+        open={Boolean(modalState)}
+        title={modalState?.mode === "edit" ? "Редактировать запись" : "Создать запись"}
+        initialItem={modalState?.item}
+        submitLabel={modalState?.mode === "edit" ? "Сохранить изменения" : "Создать"}
+        onClose={() => setModalState(null)}
+        onSubmit={async (payload) => {
+          if (modalState?.mode === "edit" && modalState.item) {
+            await updateMutation.mutateAsync({ itemId: modalState.item.id, payload });
+            return;
+          }
+          await createMutation.mutateAsync(payload);
+        }}
+      />
+
+      <ReminderCenter />
+    </div>
+  );
+}
