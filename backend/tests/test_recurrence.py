@@ -93,3 +93,39 @@ def test_delete_recurring_series_hides_all_occurrences(auth_client):
     titles = [item["title"] for item in week.json()["items"]]
     assert "Physics lab" not in titles
 
+
+def test_delete_single_recurring_task_occurrence_hides_only_selected_occurrence(auth_client):
+    created = auth_client.post(
+        "/api/v1/items",
+        json={
+            "item_type": "task",
+            "title": "Read chapter",
+            "due_at": "2026-04-06T13:00:00Z",
+            "reminders": [],
+            "recurrence": {
+                "frequency": "weekly",
+                "interval": 1,
+                "by_weekdays": [0, 2],
+                "timezone": "UTC",
+            },
+        },
+    )
+    assert created.status_code == 201
+    item_id = created.json()["id"]
+
+    before_delete = auth_client.get("/api/v1/planner/week?start=2026-04-06")
+    assert before_delete.status_code == 200
+    task_occurrences = [item for item in before_delete.json()["items"] if item["title"] == "Read chapter"]
+    assert sorted(item["occurrence_date"] for item in task_occurrences) == ["2026-04-06", "2026-04-08"]
+
+    delete_occurrence = auth_client.post(
+        f"/api/v1/items/{item_id}/delete-occurrence",
+        json={"occurrence_date": "2026-04-08"},
+    )
+    assert delete_occurrence.status_code == 200
+
+    after_delete = auth_client.get("/api/v1/planner/week?start=2026-04-06")
+    assert after_delete.status_code == 200
+    remaining_occurrences = [item for item in after_delete.json()["items"] if item["title"] == "Read chapter"]
+    assert sorted(item["occurrence_date"] for item in remaining_occurrences) == ["2026-04-06"]
+

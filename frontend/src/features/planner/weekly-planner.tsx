@@ -1,5 +1,5 @@
 import { addDays, format, parseISO } from "date-fns";
-import { CheckCircle2, Pencil, Repeat, Trash2 } from "lucide-react";
+import { CheckCircle2, Repeat } from "lucide-react";
 
 import { Button } from "../../components/ui/forms";
 import { formatTime } from "../../lib/utils/datetime";
@@ -54,22 +54,16 @@ function EventChip({ item, onOpen }: { item: PlannerOccurrence; onOpen: (item: P
   );
 }
 
-function TaskChip({
-  item,
-  onEdit,
-  onDelete,
-  onToggleComplete,
-}: {
-  item: PlannerOccurrence;
-  onEdit: (item: PlannerOccurrence) => void;
-  onDelete: (item: PlannerOccurrence) => void;
-  onToggleComplete: (item: PlannerOccurrence) => void;
-}) {
+function TaskChip({ item, onOpen, onToggleComplete }: { item: PlannerOccurrence; onOpen: (item: PlannerOccurrence) => void; onToggleComplete: (item: PlannerOccurrence) => void }) {
   const timeValue = item.display_start_at ?? item.display_due_at;
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-3xl border border-white/70 bg-white/90 p-4 shadow-soft">
-      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-3xl border border-white/70 bg-white/90 p-4 shadow-soft">
+      <button
+        type="button"
+        className="grid min-w-0 gap-2 text-left transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-coral/40"
+        onClick={() => onOpen(item)}
+      >
         <div className="min-w-0 space-y-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span
@@ -84,19 +78,12 @@ function TaskChip({
             <div className="break-words text-sm font-semibold text-ink">{item.title}</div>
             <div className="text-xs text-slate-500">{timeValue ? formatTime(timeValue) : "Без времени"}</div>
           </div>
-          {item.description ? <p className="break-words text-sm text-slate-500">{item.description}</p> : null}
         </div>
-        <div className="flex shrink-0 flex-col gap-2 self-start">
-          <Button variant={item.completed_for_occurrence ? "secondary" : "ghost"} className="h-9 w-9 p-0" onClick={() => onToggleComplete(item)}>
-            <CheckCircle2 className="size-4" />
-          </Button>
-          <Button variant="ghost" className="h-9 w-9 p-0" onClick={() => onEdit(item)}>
-            <Pencil className="size-4" />
-          </Button>
-          <Button variant="ghost" className="h-9 w-9 p-0 text-red-500" onClick={() => onDelete(item)}>
-            <Trash2 className="size-4" />
-          </Button>
-        </div>
+      </button>
+      <div className="flex shrink-0 flex-col gap-2 self-start">
+        <Button variant={item.completed_for_occurrence ? "secondary" : "ghost"} className="h-9 w-9 p-0" onClick={() => onToggleComplete(item)}>
+          <CheckCircle2 className="size-4" />
+        </Button>
       </div>
     </div>
   );
@@ -104,24 +91,20 @@ function TaskChip({
 
 function PlannerCard(props: {
   item: PlannerOccurrence;
-  onOpenEvent: (item: PlannerOccurrence) => void;
-  onEdit: (item: PlannerOccurrence) => void;
-  onDelete: (item: PlannerOccurrence) => void;
+  onOpenItem: (item: PlannerOccurrence) => void;
   onToggleComplete: (item: PlannerOccurrence) => void;
 }) {
   if (props.item.item_type === "event") {
-    return <EventChip item={props.item} onOpen={props.onOpenEvent} />;
+    return <EventChip item={props.item} onOpen={props.onOpenItem} />;
   }
 
-  return <TaskChip item={props.item} onEdit={props.onEdit} onDelete={props.onDelete} onToggleComplete={props.onToggleComplete} />;
+  return <TaskChip item={props.item} onOpen={props.onOpenItem} onToggleComplete={props.onToggleComplete} />;
 }
 
 export function WeeklyPlanner(props: {
   startOfWeek: string;
   items: PlannerOccurrence[];
-  onOpenEvent: (item: PlannerOccurrence) => void;
-  onEdit: (item: PlannerOccurrence) => void;
-  onDelete: (item: PlannerOccurrence) => void;
+  onOpenItem: (item: PlannerOccurrence) => void;
   onToggleComplete: (item: PlannerOccurrence) => void;
 }) {
   const days = groupByDay(props.items, props.startOfWeek);
@@ -141,9 +124,7 @@ export function WeeklyPlanner(props: {
                   <PlannerCard
                     key={`${item.id}-${item.occurrence_date ?? "single"}`}
                     item={item}
-                    onOpenEvent={props.onOpenEvent}
-                    onEdit={props.onEdit}
-                    onDelete={props.onDelete}
+                    onOpenItem={props.onOpenItem}
                     onToggleComplete={props.onToggleComplete}
                   />
                 ))
@@ -166,9 +147,7 @@ export function WeeklyPlanner(props: {
                 <PlannerCard
                   key={`${item.id}-${item.occurrence_date ?? "single"}`}
                   item={item}
-                  onOpenEvent={props.onOpenEvent}
-                  onEdit={props.onEdit}
-                  onDelete={props.onDelete}
+                  onOpenItem={props.onOpenItem}
                   onToggleComplete={props.onToggleComplete}
                 />
               ))

@@ -213,17 +213,15 @@ def get_week_view(db: Session, user: User, start: date) -> PlannerWeekResponse:
 
 
 def delete_occurrence(db: Session, item: PlannerItem, occurrence_date: date) -> PlannerItem:
-    if item.item_type != "event":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only events support occurrence deletion")
     if not item.is_recurring or item.recurrence_rule is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only recurring events support occurrence deletion")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only recurring planner items support occurrence deletion")
 
     anchor_dt = item.start_at or item.due_at
     if anchor_dt is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Recurring event must have a base date")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Recurring planner item must have a base date")
 
     if not occurs_on_date(item.recurrence_rule, anchor_dt.date(), occurrence_date):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Occurrence does not exist for this recurring event")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Occurrence does not exist for this recurring item")
 
     state = db.scalar(
         select(OccurrenceState).where(
