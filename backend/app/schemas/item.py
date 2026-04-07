@@ -75,6 +75,10 @@ class CompletionRequest(BaseModel):
     occurrence_date: date | None = None
 
 
+class DeleteOccurrenceRequest(BaseModel):
+    occurrence_date: date
+
+
 class ItemOccurrenceResponse(ItemResponse):
     occurrence_date: date | None = None
     display_start_at: datetime | None = None

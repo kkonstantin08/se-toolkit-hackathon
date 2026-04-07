@@ -7,15 +7,21 @@ import { queryClient } from "../app/query-client";
 import { Button } from "../components/ui/forms";
 import { ParsePanel } from "../features/ai-parser/parse-panel";
 import { ItemModal } from "../features/items/item-modal";
+import { DeleteEventModal, type DeleteEventScope } from "../features/planner/delete-event-modal";
+import { EventDetailsModal } from "../features/planner/event-details-modal";
 import { WeeklyPlanner } from "../features/planner/weekly-planner";
 import { ReminderCenter } from "../features/reminders/reminder-center";
 import { api } from "../lib/api/client";
 import { formatWeekRange, getWeekStart, toApiDate } from "../lib/utils/datetime";
 import type { ItemPayload, PlannerOccurrence } from "../types/api";
 
+type ItemModalState = { mode: "create" | "edit"; item?: PlannerOccurrence } | null;
+
 export function PlannerPage() {
   const [weekDate, setWeekDate] = useState(() => getWeekStart(new Date()));
-  const [modalState, setModalState] = useState<{ mode: "create" | "edit"; item?: PlannerOccurrence } | null>(null);
+  const [itemModalState, setItemModalState] = useState<ItemModalState>(null);
+  const [selectedEvent, setSelectedEvent] = useState<PlannerOccurrence | null>(null);
+  const [deleteEventTarget, setDeleteEventTarget] = useState<PlannerOccurrence | null>(null);
   const weekKey = toApiDate(weekDate);
 
   const googleStatusQuery = useQuery({
@@ -36,7 +42,7 @@ export function PlannerPage() {
   const createMutation = useMutation({
     mutationFn: api.createItem,
     onSuccess: async () => {
-      setModalState(null);
+      setItemModalState(null);
       await invalidatePlanner();
     },
   });
@@ -44,19 +50,35 @@ export function PlannerPage() {
   const updateMutation = useMutation({
     mutationFn: ({ itemId, payload }: { itemId: string; payload: Partial<ItemPayload> }) => api.updateItem(itemId, payload),
     onSuccess: async () => {
-      setModalState(null);
+      setItemModalState(null);
       await invalidatePlanner();
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: api.deleteItem,
-    onSuccess: invalidatePlanner,
+    onSuccess: async () => {
+      setDeleteEventTarget(null);
+      setSelectedEvent(null);
+      await invalidatePlanner();
+    },
+  });
+
+  const deleteOccurrenceMutation = useMutation({
+    mutationFn: ({ itemId, occurrenceDate }: { itemId: string; occurrenceDate: string }) => api.deleteItemOccurrence(itemId, occurrenceDate),
+    onSuccess: async () => {
+      setDeleteEventTarget(null);
+      setSelectedEvent(null);
+      await invalidatePlanner();
+    },
   });
 
   const syncMutation = useMutation({
     mutationFn: api.googleSyncItem,
-    onSuccess: invalidatePlanner,
+    onSuccess: async () => {
+      setSelectedEvent(null);
+      await invalidatePlanner();
+    },
   });
 
   const googleSyncEnabled = Boolean(googleStatusQuery.data?.configured && googleStatusQuery.data?.connected);
@@ -83,6 +105,18 @@ export function PlannerPage() {
   }, [weekQuery.data]);
 
   const weekData = weekQuery.data;
+  const isDeletingEvent = deleteMutation.isPending || deleteOccurrenceMutation.isPending;
+
+  const handleDeleteEvent = (scope: DeleteEventScope) => {
+    if (!deleteEventTarget) return;
+
+    if (scope === "single" && deleteEventTarget.occurrence_date) {
+      deleteOccurrenceMutation.mutate({ itemId: deleteEventTarget.id, occurrenceDate: deleteEventTarget.occurrence_date });
+      return;
+    }
+
+    deleteMutation.mutate(deleteEventTarget.id);
+  };
 
   return (
     <div className="grid gap-6">
@@ -100,7 +134,7 @@ export function PlannerPage() {
               <Button variant="secondary" onClick={() => startTransition(() => setWeekDate((current) => addDays(current, 7)))}>
                 Следующая неделя
               </Button>
-              <Button className="gap-2" onClick={() => setModalState({ mode: "create" })}>
+              <Button className="gap-2" onClick={() => setItemModalState({ mode: "create" })}>
                 <Plus className="size-4" />
                 Создать
               </Button>
@@ -132,7 +166,10 @@ export function PlannerPage() {
               <Wand2 className="size-5 text-coral" />
               <div className="font-semibold">Manual-first режим</div>
             </div>
-            <p className="mt-3 text-sm text-slate-600">Даже если Mistral или Google Calendar не настроены, весь основной flow остаётся доступным: ручное создание, повторения, напоминания и недельный обзор.</p>
+            <p className="mt-3 text-sm text-slate-600">
+              Даже если Mistral или Google Calendar не настроены, весь основной flow остаётся доступным: ручное создание, повторения,
+              напоминания и недельный обзор.
+            </p>
           </div>
         </div>
       </section>
@@ -155,32 +192,55 @@ export function PlannerPage() {
 
           {syncMutation.isError ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {syncMutation.error.message}. Для событий со статусом `failed` доступна кнопка повторной синхронизации.
+              {syncMutation.error.message}. Для событий со статусом `failed` доступна кнопка повторной синхронизации в окне деталей.
             </div>
           ) : null}
 
           <WeeklyPlanner
             startOfWeek={weekData.start_of_week}
             items={weekData.items}
-            onEdit={(item) => setModalState({ mode: "edit", item })}
+            onOpenEvent={setSelectedEvent}
+            onEdit={(item) => setItemModalState({ mode: "edit", item })}
             onDelete={(item) => deleteMutation.mutate(item.id)}
             onToggleComplete={(item) => toggleCompleteMutation.mutate(item)}
-            onSync={(item) => syncMutation.mutate(item.id)}
-            googleSyncEnabled={googleSyncEnabled}
-            googleSyncHint={googleSyncHint}
           />
         </div>
       ) : null}
 
+      <EventDetailsModal
+        open={Boolean(selectedEvent)}
+        item={selectedEvent}
+        syncEnabled={googleSyncEnabled}
+        syncHint={googleSyncHint}
+        onClose={() => setSelectedEvent(null)}
+        onEdit={(item) => {
+          setSelectedEvent(null);
+          setItemModalState({ mode: "edit", item });
+        }}
+        onDelete={(item) => {
+          setSelectedEvent(null);
+          setDeleteEventTarget(item);
+        }}
+        onRetrySync={(item) => syncMutation.mutate(item.id)}
+      />
+
+      <DeleteEventModal
+        open={Boolean(deleteEventTarget)}
+        item={deleteEventTarget}
+        isDeleting={isDeletingEvent}
+        onClose={() => setDeleteEventTarget(null)}
+        onConfirm={handleDeleteEvent}
+      />
+
       <ItemModal
-        open={Boolean(modalState)}
-        title={modalState?.mode === "edit" ? "Редактировать запись" : "Создать запись"}
-        initialItem={modalState?.item}
-        submitLabel={modalState?.mode === "edit" ? "Сохранить изменения" : "Создать"}
-        onClose={() => setModalState(null)}
+        open={Boolean(itemModalState)}
+        title={itemModalState?.mode === "edit" ? "Редактировать запись" : "Создать запись"}
+        initialItem={itemModalState?.item}
+        submitLabel={itemModalState?.mode === "edit" ? "Сохранить изменения" : "Создать"}
+        onClose={() => setItemModalState(null)}
         onSubmit={async (payload) => {
-          if (modalState?.mode === "edit" && modalState.item) {
-            await updateMutation.mutateAsync({ itemId: modalState.item.id, payload });
+          if (itemModalState?.mode === "edit" && itemModalState.item) {
+            await updateMutation.mutateAsync({ itemId: itemModalState.item.id, payload });
             return;
           }
           await createMutation.mutateAsync(payload);

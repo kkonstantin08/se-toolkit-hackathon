@@ -9,7 +9,7 @@ from app.api.v1.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.common import MessageResponse
-from app.schemas.item import CompletionRequest, ItemCreate, ItemResponse, ItemUpdate
+from app.schemas.item import CompletionRequest, DeleteOccurrenceRequest, ItemCreate, ItemResponse, ItemUpdate
 from app.services import google_sync as google_service
 from app.services import planner as planner_service
 
@@ -54,6 +54,17 @@ async def delete_item(item_id: str, current_user: User = Depends(get_current_use
     planner_service.delete_item(db, item)
     await google_service.auto_sync_item_change(db, current_user, item)
     return MessageResponse(message="Item deleted")
+
+
+@router.post("/{item_id}/delete-occurrence", response_model=ItemResponse)
+def delete_item_occurrence(
+    item_id: str,
+    payload: DeleteOccurrenceRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    item = planner_service.get_item_or_404(db, current_user.id, item_id)
+    return planner_service.delete_occurrence(db, item, payload.occurrence_date)
 
 
 @router.post("/{item_id}/complete", response_model=ItemResponse)

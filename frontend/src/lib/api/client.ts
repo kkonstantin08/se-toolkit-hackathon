@@ -59,6 +59,11 @@ export const api = {
   updateItem: (itemId: string, payload: Partial<ItemPayload>) =>
     request<PlannerItem>(`/items/${itemId}`, { method: "PATCH", body: JSON.stringify(payload) }),
   deleteItem: (itemId: string) => request<{ message: string }>(`/items/${itemId}`, { method: "DELETE" }),
+  deleteItemOccurrence: (itemId: string, occurrenceDate: string) =>
+    request<PlannerItem>(`/items/${itemId}/delete-occurrence`, {
+      method: "POST",
+      body: JSON.stringify({ occurrence_date: occurrenceDate }),
+    }),
   completeItem: (itemId: string, occurrenceDate?: string | null) =>
     request<PlannerItem>(`/items/${itemId}/complete`, {
       method: "POST",

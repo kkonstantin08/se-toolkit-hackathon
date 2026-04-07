@@ -1,5 +1,5 @@
 import { addDays, format, parseISO } from "date-fns";
-import { CalendarSync, CheckCircle2, Pencil, Repeat, Trash2 } from "lucide-react";
+import { CheckCircle2, Pencil, Repeat, Trash2 } from "lucide-react";
 
 import { Button } from "../../components/ui/forms";
 import { formatTime } from "../../lib/utils/datetime";
@@ -27,34 +27,58 @@ function groupByDay(items: PlannerOccurrence[], startOfWeek: string) {
   });
 }
 
-function ItemChip({
+function EventChip({ item, onOpen }: { item: PlannerOccurrence; onOpen: (item: PlannerOccurrence) => void }) {
+  const timeValue = item.display_start_at ?? item.display_due_at;
+
+  return (
+    <button
+      type="button"
+      className="grid min-w-0 gap-3 rounded-3xl border border-white/70 bg-white/90 p-4 text-left shadow-soft transition hover:-translate-y-0.5 hover:border-tide/20 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-coral/40"
+      onClick={() => onOpen(item)}
+    >
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <span
+          className="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white"
+          style={{ backgroundColor: item.color ?? "#0f3d3e" }}
+        >
+          {item.item_type}
+        </span>
+        {item.is_recurring ? <Repeat className="size-4 text-slate-400" /> : null}
+        {item.sync_status ? <span className="min-w-0 break-words text-[11px] uppercase tracking-[0.16em] text-slate-400">{item.sync_status}</span> : null}
+      </div>
+      <div className="min-w-0">
+        <div className="break-words text-sm font-semibold text-ink">{item.title}</div>
+        <div className="text-xs text-slate-500">{timeValue ? formatTime(timeValue) : "Без времени"}</div>
+      </div>
+    </button>
+  );
+}
+
+function TaskChip({
   item,
   onEdit,
   onDelete,
   onToggleComplete,
-  onSync,
-  syncEnabled,
-  syncHint,
 }: {
   item: PlannerOccurrence;
   onEdit: (item: PlannerOccurrence) => void;
   onDelete: (item: PlannerOccurrence) => void;
   onToggleComplete: (item: PlannerOccurrence) => void;
-  onSync: (item: PlannerOccurrence) => void;
-  syncEnabled: boolean;
-  syncHint: string;
 }) {
   const timeValue = item.display_start_at ?? item.display_due_at;
+
   return (
     <div className="min-w-0 overflow-hidden rounded-3xl border border-white/70 bg-white/90 p-4 shadow-soft">
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
         <div className="min-w-0 space-y-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white" style={{ backgroundColor: item.color ?? "#0f3d3e" }}>
+            <span
+              className="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white"
+              style={{ backgroundColor: item.color ?? "#0f3d3e" }}
+            >
               {item.item_type}
             </span>
             {item.is_recurring ? <Repeat className="size-4 text-slate-400" /> : null}
-            {item.sync_status ? <span className="min-w-0 break-words text-[11px] uppercase tracking-[0.16em] text-slate-400">{item.sync_status}</span> : null}
           </div>
           <div className="min-w-0">
             <div className="break-words text-sm font-semibold text-ink">{item.title}</div>
@@ -63,16 +87,9 @@ function ItemChip({
           {item.description ? <p className="break-words text-sm text-slate-500">{item.description}</p> : null}
         </div>
         <div className="flex shrink-0 flex-col gap-2 self-start">
-          {item.item_type === "task" ? (
-            <Button variant={item.completed_for_occurrence ? "secondary" : "ghost"} className="h-9 w-9 p-0" onClick={() => onToggleComplete(item)}>
-              <CheckCircle2 className="size-4" />
-            </Button>
-          ) : null}
-          {item.item_type === "event" && item.sync_status === "failed" ? (
-            <Button variant="ghost" className="h-9 w-9 p-0" onClick={() => onSync(item)} disabled={!syncEnabled} title={syncHint}>
-              <CalendarSync className="size-4" />
-            </Button>
-          ) : null}
+          <Button variant={item.completed_for_occurrence ? "secondary" : "ghost"} className="h-9 w-9 p-0" onClick={() => onToggleComplete(item)}>
+            <CheckCircle2 className="size-4" />
+          </Button>
           <Button variant="ghost" className="h-9 w-9 p-0" onClick={() => onEdit(item)}>
             <Pencil className="size-4" />
           </Button>
@@ -85,15 +102,27 @@ function ItemChip({
   );
 }
 
-export function WeeklyPlanner(props: {
-  startOfWeek: string;
-  items: PlannerOccurrence[];
+function PlannerCard(props: {
+  item: PlannerOccurrence;
+  onOpenEvent: (item: PlannerOccurrence) => void;
   onEdit: (item: PlannerOccurrence) => void;
   onDelete: (item: PlannerOccurrence) => void;
   onToggleComplete: (item: PlannerOccurrence) => void;
-  onSync: (item: PlannerOccurrence) => void;
-  googleSyncEnabled: boolean;
-  googleSyncHint: string;
+}) {
+  if (props.item.item_type === "event") {
+    return <EventChip item={props.item} onOpen={props.onOpenEvent} />;
+  }
+
+  return <TaskChip item={props.item} onEdit={props.onEdit} onDelete={props.onDelete} onToggleComplete={props.onToggleComplete} />;
+}
+
+export function WeeklyPlanner(props: {
+  startOfWeek: string;
+  items: PlannerOccurrence[];
+  onOpenEvent: (item: PlannerOccurrence) => void;
+  onEdit: (item: PlannerOccurrence) => void;
+  onDelete: (item: PlannerOccurrence) => void;
+  onToggleComplete: (item: PlannerOccurrence) => void;
 }) {
   const days = groupByDay(props.items, props.startOfWeek);
 
@@ -109,15 +138,13 @@ export function WeeklyPlanner(props: {
             <div className="grid gap-3">
               {day.items.length ? (
                 day.items.map((item) => (
-                  <ItemChip
+                  <PlannerCard
                     key={`${item.id}-${item.occurrence_date ?? "single"}`}
                     item={item}
+                    onOpenEvent={props.onOpenEvent}
                     onEdit={props.onEdit}
                     onDelete={props.onDelete}
                     onToggleComplete={props.onToggleComplete}
-                    onSync={props.onSync}
-                    syncEnabled={props.googleSyncEnabled}
-                    syncHint={props.googleSyncHint}
                   />
                 ))
               ) : (
@@ -136,15 +163,13 @@ export function WeeklyPlanner(props: {
             </div>
             {day.items.length ? (
               day.items.map((item) => (
-                <ItemChip
+                <PlannerCard
                   key={`${item.id}-${item.occurrence_date ?? "single"}`}
                   item={item}
+                  onOpenEvent={props.onOpenEvent}
                   onEdit={props.onEdit}
                   onDelete={props.onDelete}
                   onToggleComplete={props.onToggleComplete}
-                  onSync={props.onSync}
-                  syncEnabled={props.googleSyncEnabled}
-                  syncHint={props.googleSyncHint}
                 />
               ))
             ) : (

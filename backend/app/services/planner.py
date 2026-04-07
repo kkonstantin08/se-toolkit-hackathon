@@ -16,7 +16,7 @@ from app.schemas.common import RecurrencePayload, ReminderPayload
 from app.schemas.item import CompletionRequest, ItemCreate, ItemOccurrenceResponse, ItemResponse, ItemUpdate
 from app.schemas.planner import PlannerWeekResponse
 from app.utils.datetime import ensure_utc
-from app.utils.recurrence import expand_item_in_range
+from app.utils.recurrence import expand_item_in_range, occurs_on_date
 
 
 def _base_item_query(user_id: str):
@@ -98,6 +98,12 @@ def _occurrence_completed(item: PlannerItem, occurrence_date: date | None) -> bo
         state.occurrence_date == occurrence_date and state.completion_status == "completed" and not state.is_skipped
         for state in item.occurrence_states
     )
+
+
+def _occurrence_hidden(item: PlannerItem, occurrence_date: date | None) -> bool:
+    if occurrence_date is None:
+        return False
+    return any(state.occurrence_date == occurrence_date and state.is_skipped for state in item.occurrence_states)
 
 
 def _serialize_occurrence(item: PlannerItem, occurrence) -> ItemOccurrenceResponse:
@@ -199,9 +205,42 @@ def get_week_view(db: Session, user: User, start: date) -> PlannerWeekResponse:
     occurrences: list[ItemOccurrenceResponse] = []
     for item in items:
         for occurrence in expand_item_in_range(item, start_dt, end_dt):
+            if _occurrence_hidden(item, occurrence.occurrence_date):
+                continue
             occurrences.append(_serialize_occurrence(item, occurrence))
     occurrences.sort(key=lambda item: item.display_start_at or item.display_due_at or item.created_at)
     return PlannerWeekResponse(start_of_week=start_dt.date(), end_of_week=end_dt.date(), items=occurrences)
+
+
+def delete_occurrence(db: Session, item: PlannerItem, occurrence_date: date) -> PlannerItem:
+    if item.item_type != "event":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only events support occurrence deletion")
+    if not item.is_recurring or item.recurrence_rule is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only recurring events support occurrence deletion")
+
+    anchor_dt = item.start_at or item.due_at
+    if anchor_dt is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Recurring event must have a base date")
+
+    if not occurs_on_date(item.recurrence_rule, anchor_dt.date(), occurrence_date):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Occurrence does not exist for this recurring event")
+
+    state = db.scalar(
+        select(OccurrenceState).where(
+            OccurrenceState.planner_item_id == item.id,
+            OccurrenceState.occurrence_date == occurrence_date,
+        )
+    )
+    if state is None:
+        state = OccurrenceState(planner_item_id=item.id, occurrence_date=occurrence_date)
+        db.add(state)
+
+    state.completion_status = "skipped"
+    state.completed_at = None
+    state.is_skipped = True
+    item.updated_at = utc_now()
+    db.commit()
+    return get_item_or_404(db, item.user_id, item.id)
 
 
 def complete_item(db: Session, item: PlannerItem, payload: CompletionRequest) -> PlannerItem:

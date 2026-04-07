@@ -74,6 +74,47 @@ def test_event_delete_triggers_auto_sync(monkeypatch, auth_client):
     assert called == [item_id]
 
 
+def test_delete_single_occurrence_does_not_trigger_auto_sync(monkeypatch, auth_client):
+    called: list[str] = []
+
+    async def fake_auto_sync(db, user, item):
+        called.append(item.id)
+        return None
+
+    monkeypatch.setattr(google_sync, "auto_sync_item_change", fake_auto_sync)
+
+    create_response = auth_client.post(
+        "/api/v1/items",
+        json={
+            "item_type": "event",
+            "title": "Recurring sync event",
+            "description": "Only one occurrence should disappear",
+            "start_at": "2026-04-06T18:00:00Z",
+            "end_at": "2026-04-06T19:00:00Z",
+            "all_day": False,
+            "source": "manual",
+            "color": "#10B981",
+            "reminders": [],
+            "recurrence": {
+                "frequency": "weekly",
+                "interval": 1,
+                "by_weekdays": [0, 2],
+                "timezone": "UTC",
+            },
+        },
+    )
+    item_id = create_response.json()["id"]
+    called.clear()
+
+    delete_response = auth_client.post(
+        f"/api/v1/items/{item_id}/delete-occurrence",
+        json={"occurrence_date": "2026-04-08"},
+    )
+
+    assert delete_response.status_code == 200
+    assert called == []
+
+
 def test_google_payload_includes_daily_recurrence_rule():
     item = PlannerItem(
         item_type="event",
