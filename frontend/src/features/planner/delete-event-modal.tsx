@@ -1,6 +1,7 @@
 import { AlertTriangle, Trash2, X } from "lucide-react";
 
 import { Button } from "../../components/ui/forms";
+import { useI18n } from "../../lib/i18n";
 import type { PlannerOccurrence } from "../../types/api";
 
 export type DeleteEventScope = "single_item" | "single" | "series";
@@ -18,12 +19,14 @@ export function DeleteEventModal({
   onClose: () => void;
   onConfirm: (scope: DeleteEventScope) => void;
 }) {
+  const { messages } = useI18n();
+
   if (!open || !item) return null;
 
   const canDeleteSingleOccurrence = item.is_recurring && Boolean(item.occurrence_date);
   const isEvent = item.item_type === "event";
-  const entityLabel = isEvent ? "событие" : "задачу";
-  const seriesLabel = isEvent ? "всю серию" : "всю серию";
+  const entityLabel = isEvent ? messages.deleteModal.eventEntity : messages.deleteModal.taskEntity;
+  const seriesLabel = messages.deleteModal.wholeSeries;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm">
@@ -35,13 +38,9 @@ export function DeleteEventModal({
             </span>
             <div>
               <h2 className="text-xl font-semibold text-ink">
-                {canDeleteSingleOccurrence ? `Удалить только это ${isEvent ? "событие" : "вхождение задачи"} или всю серию?` : `Удалить ${entityLabel}?`}
+                {canDeleteSingleOccurrence ? messages.deleteModal.deleteEventOrSeries(isEvent) : messages.deleteModal.deleteItem(entityLabel)}
               </h2>
-              <p className="mt-2 text-sm text-slate-500">
-                {canDeleteSingleOccurrence
-                  ? "Можно скрыть только выбранное вхождение в PlanSync или удалить всю серию целиком."
-                  : "Это действие нельзя отменить."}
-              </p>
+              <p className="mt-2 text-sm text-slate-500">{canDeleteSingleOccurrence ? messages.deleteModal.recurringDescription : messages.deleteModal.irreversible}</p>
             </div>
           </div>
           <Button variant="ghost" className="size-10 rounded-full p-0" onClick={onClose} disabled={isDeleting}>
@@ -50,24 +49,22 @@ export function DeleteEventModal({
         </div>
 
         {canDeleteSingleOccurrence && isEvent && item.sync_status ? (
-          <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-            Удаление одного показа влияет только на PlanSync. Серия в Google Calendar останется без изменений.
-          </div>
+          <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">{messages.deleteModal.googleNote}</div>
         ) : null}
 
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="ghost" onClick={onClose} disabled={isDeleting}>
-            Отмена
+            {messages.common.cancel}
           </Button>
           {canDeleteSingleOccurrence ? (
             <Button variant="secondary" className="gap-2" onClick={() => onConfirm("single")} disabled={isDeleting}>
               <Trash2 className="size-4" />
-              {isEvent ? "Удалить это событие" : "Удалить это вхождение"}
+              {isEvent ? messages.deleteModal.deleteThisEvent : messages.deleteModal.deleteThisOccurrence}
             </Button>
           ) : null}
           <Button variant="danger" className="gap-2" onClick={() => onConfirm(canDeleteSingleOccurrence ? "series" : "single_item")} disabled={isDeleting}>
             <Trash2 className="size-4" />
-            {canDeleteSingleOccurrence ? `Удалить ${seriesLabel}` : `Удалить ${entityLabel}`}
+            {canDeleteSingleOccurrence ? messages.deleteModal.deleteSeries(seriesLabel) : messages.deleteModal.deleteItem(entityLabel)}
           </Button>
         </div>
       </div>

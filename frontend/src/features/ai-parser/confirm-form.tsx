@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { Button, Field, Input, Select, Textarea } from "../../components/ui/forms";
+import { useI18n } from "../../lib/i18n";
 import { fromDateTimeLocal, toDateTimeLocal } from "../../lib/utils/datetime";
 import type { ItemPayload, Recurrence, Reminder } from "../../types/api";
 
@@ -103,6 +104,7 @@ export function AiConfirmForm({
   onCancel: () => void;
 }) {
   const [state, setState] = useState<ConfirmFormState>(() => toState(initialItem));
+  const { messages } = useI18n();
 
   return (
     <form
@@ -113,52 +115,52 @@ export function AiConfirmForm({
       }}
     >
       <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-800">
-        Форма загружена из AI-черновика: {state.item_type}, {state.title || "без названия"}
+        {messages.parsePanel.createDraft}: {state.item_type === "event" ? messages.common.event : messages.common.task}, {state.title || messages.aiDraft.empty}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Тип">
+        <Field label={messages.itemForm.type}>
           <Select value={state.item_type} onChange={(event) => setState((current) => ({ ...current, item_type: event.target.value as "task" | "event" }))}>
-            <option value="task">Задача</option>
-            <option value="event">Событие</option>
+            <option value="task">{messages.common.task}</option>
+            <option value="event">{messages.common.event}</option>
           </Select>
         </Field>
-        <Field label="Цвет">
+        <Field label={messages.itemForm.color}>
           <Input type="color" value={state.color} onChange={(event) => setState((current) => ({ ...current, color: event.target.value }))} className="h-11 p-2" />
         </Field>
       </div>
 
-      <Field label="Название">
+      <Field label={messages.itemForm.title}>
         <Input value={state.title} onChange={(event) => setState((current) => ({ ...current, title: event.target.value }))} />
       </Field>
 
-      <Field label="Описание">
+      <Field label={messages.itemForm.description}>
         <Textarea value={state.description} onChange={(event) => setState((current) => ({ ...current, description: event.target.value }))} />
       </Field>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Field label="Начало">
+        <Field label={messages.itemForm.start}>
           <Input type="datetime-local" value={state.start_at} onChange={(event) => setState((current) => ({ ...current, start_at: event.target.value }))} />
         </Field>
-        <Field label="Конец">
+        <Field label={messages.itemForm.end}>
           <Input type="datetime-local" value={state.end_at} onChange={(event) => setState((current) => ({ ...current, end_at: event.target.value }))} />
         </Field>
-        <Field label="Дедлайн">
+        <Field label={messages.itemForm.due}>
           <Input type="datetime-local" value={state.due_at} onChange={(event) => setState((current) => ({ ...current, due_at: event.target.value }))} />
         </Field>
       </div>
 
       <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
         <input type="checkbox" checked={state.all_day} onChange={(event) => setState((current) => ({ ...current, all_day: event.target.checked }))} />
-        Весь день
+        {messages.itemForm.allDay}
       </label>
 
       <div className="grid gap-4 rounded-[1.75rem] border border-slate-200 bg-white p-4">
-        <div className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Напоминания</div>
+        <div className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">{messages.itemForm.reminders}</div>
         {state.reminders.length ? (
           state.reminders.map((reminder, index) => (
             <div key={`${index}-${reminder.trigger_mode}`} className="grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 md:grid-cols-4">
-              <Field label="Режим">
+              <Field label={messages.itemForm.mode}>
                 <Select
                   value={reminder.trigger_mode}
                   onChange={(event) =>
@@ -170,12 +172,12 @@ export function AiConfirmForm({
                     }))
                   }
                 >
-                  <option value="relative">До начала</option>
-                  <option value="absolute">Точная дата</option>
+                  <option value="relative">{messages.itemForm.beforeStart}</option>
+                  <option value="absolute">{messages.itemForm.exactDate}</option>
                 </Select>
               </Field>
               {reminder.trigger_mode === "relative" ? (
-                <Field label="Смещение, мин">
+                <Field label={messages.itemForm.offsetMinutes}>
                   <Input
                     type="number"
                     value={reminder.offset_minutes}
@@ -190,7 +192,7 @@ export function AiConfirmForm({
                   />
                 </Field>
               ) : (
-                <Field label="Момент срабатывания">
+                <Field label={messages.itemForm.triggerMoment}>
                   <Input
                     type="datetime-local"
                     value={reminder.absolute_trigger_at}
@@ -205,7 +207,7 @@ export function AiConfirmForm({
                   />
                 </Field>
               )}
-              <Field label="Канал">
+              <Field label={messages.itemForm.channel}>
                 <Select
                   value={reminder.channel}
                   onChange={(event) =>
@@ -217,8 +219,8 @@ export function AiConfirmForm({
                     }))
                   }
                 >
-                  <option value="in_app">In-app</option>
-                  <option value="browser">Browser</option>
+                  <option value="in_app">{messages.common.inApp}</option>
+                  <option value="browser">{messages.common.browser}</option>
                 </Select>
               </Field>
               <div className="flex items-end justify-between gap-3">
@@ -235,7 +237,7 @@ export function AiConfirmForm({
                       }))
                     }
                   />
-                  Активно
+                  {messages.common.active}
                 </label>
                 <Button
                   type="button"
@@ -247,13 +249,13 @@ export function AiConfirmForm({
                     }))
                   }
                 >
-                  Удалить
+                  {messages.itemForm.deleteReminder}
                 </Button>
               </div>
             </div>
           ))
         ) : (
-          <div className="text-sm text-slate-400">AI не извлёк напоминания.</div>
+          <div className="text-sm text-slate-400">{messages.common.noReminders}</div>
         )}
         <Button
           type="button"
@@ -275,23 +277,23 @@ export function AiConfirmForm({
             }))
           }
         >
-          Добавить напоминание
+          {messages.itemForm.addReminder}
         </Button>
       </div>
 
       <div className="grid gap-4 rounded-[1.75rem] border border-slate-200 bg-white p-4">
-        <div className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Повторение</div>
+        <div className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">{messages.itemForm.recurrence}</div>
         <label className="flex items-center gap-3 text-sm text-slate-600">
           <input
             type="checkbox"
             checked={state.recurrence_enabled}
             onChange={(event) => setState((current) => ({ ...current, recurrence_enabled: event.target.checked }))}
           />
-          Повторять
+          {messages.itemForm.repeat}
         </label>
         {state.recurrence_enabled ? (
           <div className="grid gap-4 md:grid-cols-3">
-            <Field label="Частота">
+            <Field label={messages.itemForm.frequency}>
               <Select
                 value={state.recurrence_frequency}
                 onChange={(event) =>
@@ -301,12 +303,12 @@ export function AiConfirmForm({
                   }))
                 }
               >
-                <option value="daily">Ежедневно</option>
-                <option value="weekly">Еженедельно</option>
-                <option value="monthly">Ежемесячно</option>
+                <option value="daily">{messages.itemForm.daily}</option>
+                <option value="weekly">{messages.itemForm.weekly}</option>
+                <option value="monthly">{messages.itemForm.monthly}</option>
               </Select>
             </Field>
-            <Field label="Интервал">
+            <Field label={messages.itemForm.interval}>
               <Input
                 type="number"
                 min={1}
@@ -314,7 +316,7 @@ export function AiConfirmForm({
                 onChange={(event) => setState((current) => ({ ...current, recurrence_interval: Number(event.target.value) }))}
               />
             </Field>
-            <Field label="До даты">
+            <Field label={messages.itemForm.untilDate}>
               <Input type="date" value={state.recurrence_ends_on} onChange={(event) => setState((current) => ({ ...current, recurrence_ends_on: event.target.value }))} />
             </Field>
           </div>
@@ -322,9 +324,9 @@ export function AiConfirmForm({
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit">Подтвердить и сохранить</Button>
+        <Button type="submit">{messages.common.saveChanges}</Button>
         <Button type="button" variant="ghost" onClick={onCancel}>
-          Отмена
+          {messages.common.cancel}
         </Button>
       </div>
     </form>

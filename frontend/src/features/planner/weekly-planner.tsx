@@ -3,6 +3,7 @@ import { addDays, format, parseISO } from "date-fns";
 import { CalendarSync, CheckCircle2, Repeat } from "lucide-react";
 
 import { Button } from "../../components/ui/forms";
+import { getItemTypeLabel, getSyncStatusLabel, useI18n } from "../../lib/i18n";
 import { formatTime } from "../../lib/utils/datetime";
 import type { PlannerOccurrence } from "../../types/api";
 
@@ -10,11 +11,9 @@ function groupByDay(items: PlannerOccurrence[], startOfWeek: string) {
   const start = parseISO(startOfWeek);
   return Array.from({ length: 7 }).map((_, index) => {
     const day = addDays(start, index);
-    const dayLabel = format(day, "EEE d");
     const dayKey = format(day, "yyyy-MM-dd");
     return {
       day,
-      dayLabel,
       items: items.filter((item) => {
         const itemDate =
           item.occurrence_date ??
@@ -42,6 +41,9 @@ function EventChip({
   syncHint: string;
 }) {
   const timeValue = item.display_start_at ?? item.display_due_at;
+  const { language, messages } = useI18n();
+  const itemTypeLabel = getItemTypeLabel(language, item.item_type);
+  const syncStatusLabel = getSyncStatusLabel(language, item.sync_status);
 
   return (
     <>
@@ -57,14 +59,14 @@ function EventChip({
                 className="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white"
                 style={{ backgroundColor: item.color ?? "#0f3d3e" }}
               >
-                {item.item_type}
+                {itemTypeLabel}
               </span>
               {item.is_recurring ? <Repeat className="size-4 text-slate-400" /> : null}
-              {item.sync_status ? <span className="min-w-0 break-words text-[11px] uppercase tracking-[0.16em] text-slate-400">{item.sync_status}</span> : null}
+              {item.sync_status ? <span className="min-w-0 break-words text-[11px] uppercase tracking-[0.16em] text-slate-400">{syncStatusLabel}</span> : null}
             </div>
             <div className="min-w-0">
               <div className="break-words text-sm font-semibold text-ink">{item.title}</div>
-              <div className="text-xs text-slate-500">{timeValue ? formatTime(timeValue) : "Без времени"}</div>
+              <div className="text-xs text-slate-500">{timeValue ? formatTime(timeValue) : messages.common.noTime}</div>
             </div>
           </button>
           <div className="flex shrink-0 flex-col gap-2 self-start">
@@ -77,7 +79,7 @@ function EventChip({
               }}
               disabled={!syncEnabled}
               title={syncHint}
-              aria-label="Синхронизировать событие"
+              aria-label={messages.weeklyPlanner.syncEvent}
             >
               <CalendarSync className="size-4" />
             </Button>
@@ -95,7 +97,7 @@ function EventChip({
           }}
           disabled={!syncEnabled}
           title={syncHint}
-          aria-label="Синхронизировать событие"
+          aria-label={messages.weeklyPlanner.syncEvent}
         >
           <CalendarSync className="size-4" />
         </Button>
@@ -110,16 +112,16 @@ function EventChip({
               className="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white"
               style={{ backgroundColor: item.color ?? "#0f3d3e" }}
             >
-              {item.item_type}
+              {itemTypeLabel}
             </span>
             {item.is_recurring ? <Repeat className="size-4 text-slate-400" /> : null}
-            {item.sync_status ? <span className="min-w-0 break-words text-[11px] uppercase tracking-[0.16em] text-slate-400">{item.sync_status}</span> : null}
+            {item.sync_status ? <span className="min-w-0 break-words text-[11px] uppercase tracking-[0.16em] text-slate-400">{syncStatusLabel}</span> : null}
           </div>
           <div className="min-w-0">
             <div className="overflow-hidden text-sm font-semibold leading-5 text-ink [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
               {item.title}
             </div>
-            <div className="mt-1 text-xs text-slate-500">{timeValue ? formatTime(timeValue) : "Без времени"}</div>
+            <div className="mt-1 text-xs text-slate-500">{timeValue ? formatTime(timeValue) : messages.common.noTime}</div>
           </div>
         </button>
       </div>
@@ -130,6 +132,8 @@ function EventChip({
 function TaskChip({ item, onOpen, onToggleComplete }: { item: PlannerOccurrence; onOpen: (item: PlannerOccurrence) => void; onToggleComplete: (item: PlannerOccurrence) => void }) {
   const timeValue = item.display_start_at ?? item.display_due_at;
   const isCompleted = item.completed_for_occurrence;
+  const { language, messages } = useI18n();
+  const itemTypeLabel = getItemTypeLabel(language, item.item_type);
 
   return (
     <>
@@ -151,13 +155,13 @@ function TaskChip({ item, onOpen, onToggleComplete }: { item: PlannerOccurrence;
                   className="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white"
                   style={{ backgroundColor: item.color ?? "#0f3d3e" }}
                 >
-                  {item.item_type}
+                  {itemTypeLabel}
                 </span>
                 {item.is_recurring ? <Repeat className="size-4 text-slate-400" /> : null}
               </div>
               <div className="min-w-0">
                 <div className="break-words text-sm font-semibold text-ink">{item.title}</div>
-                <div className="text-xs text-slate-500">{timeValue ? formatTime(timeValue) : "Без времени"}</div>
+                <div className="text-xs text-slate-500">{timeValue ? formatTime(timeValue) : messages.common.noTime}</div>
               </div>
             </div>
           </button>
@@ -172,8 +176,8 @@ function TaskChip({ item, onOpen, onToggleComplete }: { item: PlannerOccurrence;
                 event.stopPropagation();
                 onToggleComplete(item);
               }}
-              aria-label={isCompleted ? "Отметить как невыполненную" : "Отметить как выполненную"}
-              title={isCompleted ? "Отметить как невыполненную" : "Отметить как выполненную"}
+              aria-label={isCompleted ? messages.weeklyPlanner.uncomplete : messages.weeklyPlanner.complete}
+              title={isCompleted ? messages.weeklyPlanner.uncomplete : messages.weeklyPlanner.complete}
             >
               <CheckCircle2 className="size-5" />
             </Button>
@@ -197,8 +201,8 @@ function TaskChip({ item, onOpen, onToggleComplete }: { item: PlannerOccurrence;
             event.stopPropagation();
             onToggleComplete(item);
           }}
-          aria-label={isCompleted ? "Отметить как невыполненную" : "Отметить как выполненную"}
-          title={isCompleted ? "Отметить как невыполненную" : "Отметить как выполненную"}
+          aria-label={isCompleted ? messages.weeklyPlanner.uncomplete : messages.weeklyPlanner.complete}
+          title={isCompleted ? messages.weeklyPlanner.uncomplete : messages.weeklyPlanner.complete}
         >
           <CheckCircle2 className="size-4" />
         </Button>
@@ -214,7 +218,7 @@ function TaskChip({ item, onOpen, onToggleComplete }: { item: PlannerOccurrence;
                 className="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white"
                 style={{ backgroundColor: item.color ?? "#0f3d3e" }}
               >
-                {item.item_type}
+                {itemTypeLabel}
               </span>
               {item.is_recurring ? <Repeat className="size-4 text-slate-400" /> : null}
             </div>
@@ -222,7 +226,7 @@ function TaskChip({ item, onOpen, onToggleComplete }: { item: PlannerOccurrence;
               <div className="overflow-hidden text-sm font-semibold leading-5 text-ink [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
                 {item.title}
               </div>
-              <div className="mt-1 text-xs text-slate-500">{timeValue ? formatTime(timeValue) : "Без времени"}</div>
+              <div className="mt-1 text-xs text-slate-500">{timeValue ? formatTime(timeValue) : messages.common.noTime}</div>
             </div>
           </div>
         </button>
@@ -256,15 +260,16 @@ export function WeeklyPlanner(props: {
   googleSyncHint: string;
 }) {
   const days = groupByDay(props.items, props.startOfWeek);
+  const { dateLocale, messages } = useI18n();
 
   return (
     <>
       <div className="hidden gap-4 lg:grid lg:grid-cols-7">
         {days.map((day) => (
-          <section key={day.dayLabel} className="grid gap-3 rounded-[2rem] bg-mist/70 p-4">
+          <section key={day.day.toISOString()} className="grid gap-3 rounded-[2rem] bg-mist/70 p-4">
             <div>
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-500">{format(day.day, "EEEE")}</div>
-              <div className="text-xl font-semibold text-ink">{format(day.day, "d MMM")}</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-500">{format(day.day, "EEEE", { locale: dateLocale })}</div>
+              <div className="text-xl font-semibold text-ink">{format(day.day, "d MMM", { locale: dateLocale })}</div>
             </div>
             <div className="grid gap-3">
               {day.items.length ? (
@@ -280,7 +285,7 @@ export function WeeklyPlanner(props: {
                   />
                 ))
               ) : (
-                <div className="rounded-3xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-400">Ничего не запланировано.</div>
+                <div className="rounded-3xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-400">{messages.weeklyPlanner.nothingPlanned}</div>
               )}
             </div>
           </section>
@@ -288,10 +293,12 @@ export function WeeklyPlanner(props: {
       </div>
       <div className="grid gap-4 lg:hidden">
         {days.map((day) => (
-          <section key={day.dayLabel} className="grid gap-3 rounded-[2rem] bg-white/80 p-4 shadow-soft">
+          <section key={day.day.toISOString()} className="grid gap-3 rounded-[2rem] bg-white/80 p-4 shadow-soft">
             <div className="flex items-center justify-between">
-              <div className="text-sm uppercase tracking-[0.16em] text-slate-500">{day.dayLabel}</div>
-              <div className="text-sm text-slate-400">{day.items.length} записей</div>
+              <div className="text-sm uppercase tracking-[0.16em] text-slate-500">{format(day.day, "EEE d", { locale: dateLocale })}</div>
+              <div className="text-sm text-slate-400">
+                {day.items.length} {messages.common.records}
+              </div>
             </div>
             {day.items.length ? (
               day.items.map((item) => (
@@ -306,7 +313,7 @@ export function WeeklyPlanner(props: {
                 />
               ))
             ) : (
-              <div className="text-sm text-slate-400">Пауза без задач и событий.</div>
+              <div className="text-sm text-slate-400">{messages.weeklyPlanner.pause}</div>
             )}
           </section>
         ))}

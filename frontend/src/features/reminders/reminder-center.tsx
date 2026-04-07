@@ -3,6 +3,7 @@ import { Bell, BellRing } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "../../components/ui/forms";
+import { useI18n } from "../../lib/i18n";
 import { api } from "../../lib/api/client";
 import type { DueReminder } from "../../types/api";
 
@@ -10,6 +11,7 @@ export function ReminderCenter() {
   const browserNotificationSupported = typeof window !== "undefined" && "Notification" in window;
   const [notificationPermission, setNotificationPermission] = useState(browserNotificationSupported ? Notification.permission : "default");
   const deliveredKeys = useRef(new Set<string>());
+  const { messages } = useI18n();
 
   const remindersQuery = useQuery({
     queryKey: ["due-reminders"],
@@ -26,18 +28,18 @@ export function ReminderCenter() {
       deliveredKeys.current.add(key);
       if (browserNotificationSupported && reminder.channel === "browser" && Notification.permission === "granted") {
         new Notification(reminder.title, {
-          body: reminder.item_type === "event" ? "Событие скоро начнётся" : "Задача требует внимания прямо сейчас",
+          body: reminder.item_type === "event" ? messages.reminders.eventStartsSoon : messages.reminders.taskNeedsAttention,
         });
       }
     }
-  }, [browserNotificationSupported, remindersQuery.data]);
+  }, [browserNotificationSupported, remindersQuery.data, messages.reminders.eventStartsSoon, messages.reminders.taskNeedsAttention]);
 
   return (
     <div className="fixed bottom-4 right-4 z-40 grid w-[min(24rem,calc(100vw-2rem))] gap-3">
       <div className="flex items-center justify-between rounded-2xl bg-white/90 px-4 py-3 shadow-soft backdrop-blur">
         <div className="flex items-center gap-2 text-sm font-medium text-ink">
           <Bell className="size-4" />
-          Напоминания
+          {messages.reminders.title}
         </div>
         {browserNotificationSupported && notificationPermission !== "granted" ? (
           <Button
@@ -48,7 +50,7 @@ export function ReminderCenter() {
               setNotificationPermission(permission);
             }}
           >
-            Browser
+            {messages.common.browser}
           </Button>
         ) : null}
       </div>
@@ -58,7 +60,7 @@ export function ReminderCenter() {
             <BellRing className="size-4 text-coral" />
             {reminder.title}
           </div>
-          <p className="mt-1 text-sm text-white/70">{reminder.item_type === "event" ? "Событие скоро начнётся." : "Задача требует внимания прямо сейчас."}</p>
+          <p className="mt-1 text-sm text-white/70">{reminder.item_type === "event" ? `${messages.reminders.eventStartsSoon}.` : `${messages.reminders.taskNeedsAttention}.`}</p>
         </div>
       ))}
     </div>

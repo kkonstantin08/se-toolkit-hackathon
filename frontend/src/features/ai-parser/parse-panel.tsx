@@ -4,11 +4,14 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Button, Textarea } from "../../components/ui/forms";
+import { useI18n } from "../../lib/i18n";
 import { api } from "../../lib/api/client";
 
 export function ParsePanel() {
   const [rawText, setRawText] = useState("");
   const navigate = useNavigate();
+  const { messages } = useI18n();
+
   const parseMutation = useMutation({
     mutationFn: api.parseText,
     onSuccess: (draft) => {
@@ -24,8 +27,8 @@ export function ParsePanel() {
           <Sparkles className="size-5" />
         </span>
         <div>
-          <h2 className="text-lg font-semibold">AI-ввод без автосохранения</h2>
-          <p className="text-sm text-white/70">Вставьте задачу или событие свободным текстом. PlanSync создаст только черновик для проверки, а не готовую запись.</p>
+          <h2 className="text-lg font-semibold">{messages.parsePanel.title}</h2>
+          <p className="text-sm text-white/70">{messages.parsePanel.subtitle}</p>
         </div>
       </div>
 
@@ -33,7 +36,7 @@ export function ParsePanel() {
         value={rawText}
         onChange={(event) => setRawText(event.target.value)}
         className="border-white/10 bg-white/10 text-white placeholder:text-white/50"
-        placeholder="Например: Встреча с куратором 2026-04-10 18:00, напомнить за 1 день и за 30 минут"
+        placeholder={messages.parsePanel.placeholder}
       />
 
       <div className="flex flex-wrap items-center gap-3">
@@ -47,9 +50,9 @@ export function ParsePanel() {
           disabled={!rawText.trim() || parseMutation.isPending}
           className="w-fit bg-coral hover:bg-coral/90"
         >
-          {parseMutation.isPending ? "Разбираем..." : "Создать AI-черновик"}
+          {parseMutation.isPending ? messages.parsePanel.parsing : messages.parsePanel.createDraft}
         </Button>
-        <div className="text-xs text-white/70">После отправки откроется экран подтверждения с предзаполненными полями.</div>
+        <div className="text-xs text-white/70">{messages.parsePanel.confirmationHint}</div>
       </div>
 
       {parseMutation.isError ? <p className="text-sm text-rose-200">{parseMutation.error.message}</p> : null}

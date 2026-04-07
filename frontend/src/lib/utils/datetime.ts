@@ -1,5 +1,7 @@
 import { addDays, format, parseISO, startOfWeek } from "date-fns";
 
+import { getDateFnsLocale, type Language } from "../i18n";
+
 export function getWeekStart(date: Date) {
   return startOfWeek(date, { weekStartsOn: 1 });
 }
@@ -8,15 +10,16 @@ export function toApiDate(date: Date) {
   return format(date, "yyyy-MM-dd");
 }
 
-export function formatWeekRange(date: Date) {
+export function formatWeekRange(date: Date, language: Language = "en") {
   const weekStart = getWeekStart(date);
   const weekEnd = addDays(weekStart, 6);
-  return `${format(weekStart, "d MMM")} - ${format(weekEnd, "d MMM")}`;
+  const locale = getDateFnsLocale(language);
+  return `${format(weekStart, "d MMM", { locale })} - ${format(weekEnd, "d MMM", { locale })}`;
 }
 
-export function formatDisplayDate(value?: string | null) {
-  if (!value) return "Без даты";
-  return format(parseISO(value), "EEE, d MMM HH:mm");
+export function formatDisplayDate(value?: string | null, language: Language = "en") {
+  if (!value) return language === "ru" ? "Без даты" : "No date";
+  return format(parseISO(value), "EEE, d MMM HH:mm", { locale: getDateFnsLocale(language) });
 }
 
 export function formatTime(value?: string | null) {
@@ -36,4 +39,3 @@ export function fromDateTimeLocal(value?: string | null) {
   if (!value) return null;
   return new Date(value).toISOString();
 }
-

@@ -3,9 +3,11 @@ import { CalendarSync, Link2, Unplug } from "lucide-react";
 
 import { queryClient } from "../../../app/query-client";
 import { Button } from "../../../components/ui/forms";
+import { useI18n } from "../../../lib/i18n";
 import { api } from "../../../lib/api/client";
 
 export function GooglePanel() {
+  const { messages } = useI18n();
   const statusQuery = useQuery({
     queryKey: ["google-status"],
     queryFn: api.googleStatus,
@@ -33,41 +35,43 @@ export function GooglePanel() {
         </span>
         <div>
           <h2 className="text-xl font-semibold text-ink">Google Calendar</h2>
-          <p className="text-sm text-slate-500">Автоматическая синхронизация событий из PlanSync в Google без двустороннего merge.</p>
+          <p className="text-sm text-slate-500">{messages.google.subtitle}</p>
         </div>
       </div>
 
       <div className="grid gap-3 rounded-3xl bg-slate-50 p-4 text-sm text-slate-600">
         <div className="flex items-center justify-between">
-          <span>Настройка в `.env`</span>
+          <span>{messages.google.envSetup}</span>
           <span className={`rounded-full px-3 py-1 text-xs uppercase tracking-[0.16em] ${status?.configured ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-            {status?.configured ? "configured" : "missing env"}
+            {status?.configured ? messages.google.configured : messages.google.missingEnv}
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span>Статус подключения</span>
+          <span>{messages.google.connectionStatus}</span>
           <span className={`rounded-full px-3 py-1 text-xs uppercase tracking-[0.16em] ${status?.connected ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"}`}>
-            {status?.connected ? "connected" : "not connected"}
+            {status?.connected ? messages.google.connected : messages.google.notConnectedStatus}
           </span>
         </div>
-        <div>Email: {status?.provider_email ?? "не подключен"}</div>
-        <div>Календарь по умолчанию: {status?.default_calendar_id ?? "primary будет выбран после подключения"}</div>
+        <div>
+          {messages.google.email}: {status?.provider_email ?? messages.google.notConnected}
+        </div>
+        <div>
+          {messages.google.defaultCalendar}: {status?.default_calendar_id ?? messages.google.primarySelected}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3">
         {!status?.configured ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Заполните `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` и `GOOGLE_REDIRECT_URI` в `.env`, затем пересоберите backend.
-          </div>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{messages.google.fillEnv}</div>
         ) : status?.connected ? (
           <Button variant="danger" className="gap-2" onClick={() => disconnectMutation.mutate()}>
             <Unplug className="size-4" />
-            Отключить Google
+            {messages.google.disconnect}
           </Button>
         ) : (
           <Button className="gap-2" onClick={() => connectMutation.mutate()}>
             <Link2 className="size-4" />
-            Подключить Google Calendar
+            {messages.google.connect}
           </Button>
         )}
       </div>

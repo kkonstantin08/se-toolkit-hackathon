@@ -3,31 +3,35 @@ import { CalendarDays, LogOut, Sparkles } from "lucide-react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 
 import { useCurrentUser, useLogout } from "../../features/auth/use-auth";
+import { useI18n } from "../../lib/i18n";
+import { LanguageToggle } from "../ui/language-toggle";
 import { Button } from "../ui/forms";
-
-const navItems = [
-  { to: "/planner", label: "Планер" },
-  { to: "/settings/integrations", label: "Интеграции" },
-];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { data: user } = useCurrentUser();
   const logout = useLogout();
   const navigate = useNavigate();
+  const { messages } = useI18n();
+
+  const navItems = [
+    { to: "/planner", label: messages.appShell.navPlanner },
+    { to: "/settings/integrations", label: messages.appShell.navIntegrations },
+  ];
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,61,62,0.12),_transparent_36%),linear-gradient(180deg,_#f8f3e8_0%,_#fefcf8_52%,_#eef6ff_100%)]">
       <header className="sticky top-0 z-30 border-b border-white/60 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-6">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6">
           <Link to="/planner" className="flex items-center gap-3 text-ink">
             <span className="grid size-10 place-items-center rounded-2xl bg-tide text-white shadow-soft">
               <CalendarDays className="size-5" />
             </span>
             <div>
-              <div className="text-lg font-semibold">PlanSync</div>
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Student Planner</div>
+              <div className="text-lg font-semibold">{messages.common.appName}</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-slate-500">{messages.common.studentPlanner}</div>
             </div>
           </Link>
+
           <nav className="hidden items-center gap-2 md:flex">
             {navItems.map((item) => (
               <NavLink
@@ -41,7 +45,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               </NavLink>
             ))}
           </nav>
+
           <div className="flex items-center gap-3">
+            <LanguageToggle />
             <div className="hidden text-right md:block">
               <div className="text-sm font-medium text-ink">{user?.full_name}</div>
               <div className="text-xs text-slate-500">{user?.email}</div>
@@ -55,7 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               }}
             >
               <LogOut className="size-4" />
-              Выйти
+              {messages.appShell.logout}
             </Button>
           </div>
         </div>
@@ -66,8 +72,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Sparkles className="size-5" />
           </span>
           <div>
-            <h1 className="text-lg font-semibold text-ink">Единая неделя для задач, событий и быстрых AI-черновиков</h1>
-            <p className="text-sm text-slate-500">Manual-first планирование с подтверждением перед сохранением любого AI-разбора.</p>
+            <h1 className="text-lg font-semibold text-ink">{messages.appShell.heroTitle}</h1>
+            <p className="text-sm text-slate-500">{messages.appShell.heroSubtitle}</p>
           </div>
         </div>
         {children}

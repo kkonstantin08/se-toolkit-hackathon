@@ -4,15 +4,17 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { queryClient } from "../app/query-client";
 import { Button } from "../components/ui/forms";
-import { formatDisplayDate } from "../lib/utils/datetime";
 import { AiConfirmForm } from "../features/ai-parser/confirm-form";
+import { useI18n } from "../lib/i18n";
 import { api } from "../lib/api/client";
+import { formatDisplayDate } from "../lib/utils/datetime";
 
 function SourceBadge({ source, modelName }: { source: string; modelName: string }) {
+  const { messages } = useI18n();
   const isMistral = source === "mistral";
   return (
     <div className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${isMistral ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-      {isMistral ? `Mistral active: ${modelName}` : "Fallback mode"}
+      {isMistral ? messages.aiDraft.mistralActive(modelName) : messages.aiDraft.fallbackMode}
     </div>
   );
 }
@@ -30,22 +32,26 @@ function ExtractedSummary({
   dueAt?: string | null;
   remindersCount: number;
 }) {
+  const { language, messages } = useI18n();
+
   return (
     <div className="grid gap-3 rounded-[1.75rem] bg-mist/70 p-4 text-sm text-slate-700 md:grid-cols-4">
       <div>
-        <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Тип</div>
-        <div className="mt-1 font-medium">{itemType ?? "не определён"}</div>
+        <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{messages.aiDraft.type}</div>
+        <div className="mt-1 font-medium">{itemType === "event" ? messages.common.event : itemType === "task" ? messages.common.task : messages.aiDraft.undefined}</div>
       </div>
       <div>
-        <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Заголовок</div>
-        <div className="mt-1 font-medium">{title ?? "пусто"}</div>
+        <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{messages.aiDraft.title}</div>
+        <div className="mt-1 font-medium">{title ?? messages.aiDraft.empty}</div>
       </div>
       <div>
-        <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Дата/время</div>
-        <div className="mt-1 font-medium">{startAt ? formatDisplayDate(startAt) : dueAt ? formatDisplayDate(dueAt) : "не извлечено"}</div>
+        <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{messages.aiDraft.dateTime}</div>
+        <div className="mt-1 font-medium">
+          {startAt ? formatDisplayDate(startAt, language) : dueAt ? formatDisplayDate(dueAt, language) : messages.aiDraft.notExtracted}
+        </div>
       </div>
       <div>
-        <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Напоминания</div>
+        <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{messages.aiDraft.reminders}</div>
         <div className="mt-1 font-medium">{remindersCount}</div>
       </div>
     </div>
@@ -55,6 +61,7 @@ function ExtractedSummary({
 export function AiDraftPage() {
   const { draftId = "" } = useParams();
   const navigate = useNavigate();
+  const { messages } = useI18n();
 
   const draftQuery = useQuery({
     queryKey: ["draft", draftId],
@@ -76,11 +83,11 @@ export function AiDraftPage() {
   });
 
   if (draftQuery.isLoading) {
-    return <div className="rounded-[2rem] bg-white/80 p-10 text-center text-slate-500 shadow-soft">Загружаем AI-черновик...</div>;
+    return <div className="rounded-[2rem] bg-white/80 p-10 text-center text-slate-500 shadow-soft">{messages.aiDraft.loading}</div>;
   }
 
   if (draftQuery.isError || !draftQuery.data) {
-    return <div className="rounded-[2rem] bg-white/80 p-10 text-center text-red-500 shadow-soft">Не удалось загрузить черновик.</div>;
+    return <div className="rounded-[2rem] bg-white/80 p-10 text-center text-red-500 shadow-soft">{messages.aiDraft.loadFailed}</div>;
   }
 
   const draft = draftQuery.data;
@@ -95,13 +102,13 @@ export function AiDraftPage() {
               <Sparkles className="size-5" />
             </span>
             <div>
-              <h1 className="text-2xl font-semibold text-ink">Проверьте AI-разбор перед сохранением</h1>
-              <p className="mt-2 text-sm text-slate-500">Черновик ещё ничего не сохранил. Если AI ошибся, просто исправьте поля ниже и подтвердите только корректную версию.</p>
+              <h1 className="text-2xl font-semibold text-ink">{messages.aiDraft.heading}</h1>
+              <p className="mt-2 text-sm text-slate-500">{messages.aiDraft.subtitle}</p>
             </div>
           </div>
           <Button variant="ghost" className="gap-2 text-red-500" onClick={() => deleteMutation.mutate()}>
             <Trash2 className="size-4" />
-            Отклонить
+            {messages.aiDraft.reject}
           </Button>
         </div>
 
@@ -111,13 +118,13 @@ export function AiDraftPage() {
             {draft.parse_source !== "mistral" ? (
               <div className="inline-flex items-center gap-2 text-amber-700">
                 <AlertTriangle className="size-4" />
-                Использован fallback-разбор, проверьте поля особенно внимательно.
+                {messages.aiDraft.fallbackWarning}
               </div>
             ) : null}
           </div>
 
           <div>
-            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Исходный текст</div>
+            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{messages.aiDraft.sourceText}</div>
             <p className="mt-2">{draft.raw_text}</p>
           </div>
 
@@ -131,7 +138,7 @@ export function AiDraftPage() {
 
           {draft.warnings_json.length ? (
             <div>
-              <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Warnings</div>
+              <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{messages.aiDraft.warnings}</div>
               <ul className="mt-2 grid gap-1">
                 {draft.warnings_json.map((warning) => (
                   <li key={warning}>• {warning}</li>

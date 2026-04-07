@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 
+import { useI18n } from "../../lib/i18n";
 import { Button } from "../../components/ui/forms";
 import type { ItemPayload, PlannerItem } from "../../types/api";
 import { ItemForm } from "./item-form";
@@ -19,6 +20,8 @@ export function ItemModal({
   onSubmit: (payload: ItemPayload) => Promise<void>;
   onClose: () => void;
 }) {
+  const { messages } = useI18n();
+
   if (!open) return null;
 
   return (
@@ -27,7 +30,7 @@ export function ItemModal({
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h2 className="text-2xl font-semibold text-ink">{title}</h2>
-            <p className="mt-1 text-sm text-slate-500">Перед сохранением можно отредактировать даты, повторения и напоминания.</p>
+            <p className="mt-1 text-sm text-slate-500">{messages.itemModal.subtitle}</p>
           </div>
           <Button variant="ghost" className="size-10 rounded-full p-0" onClick={onClose}>
             <X className="size-4" />

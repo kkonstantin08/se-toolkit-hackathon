@@ -11,6 +11,7 @@ import { DeleteEventModal, type DeleteEventScope } from "../features/planner/del
 import { EventDetailsModal } from "../features/planner/event-details-modal";
 import { WeeklyPlanner } from "../features/planner/weekly-planner";
 import { ReminderCenter } from "../features/reminders/reminder-center";
+import { useI18n } from "../lib/i18n";
 import { api } from "../lib/api/client";
 import { formatWeekRange, getWeekStart, toApiDate } from "../lib/utils/datetime";
 import type { ItemPayload, PlannerOccurrence } from "../types/api";
@@ -23,6 +24,7 @@ export function PlannerPage() {
   const [selectedItem, setSelectedItem] = useState<PlannerOccurrence | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PlannerOccurrence | null>(null);
   const weekKey = toApiDate(weekDate);
+  const { language, messages } = useI18n();
 
   const googleStatusQuery = useQuery({
     queryKey: ["google-status"],
@@ -83,10 +85,10 @@ export function PlannerPage() {
 
   const googleSyncEnabled = Boolean(googleStatusQuery.data?.configured && googleStatusQuery.data?.connected);
   const googleSyncHint = !googleStatusQuery.data?.configured
-    ? "Google Calendar не настроен в .env"
+    ? messages.planner.googleMissing
     : !googleStatusQuery.data?.connected
-      ? "Сначала подключите Google Calendar на странице интеграций"
-      : "Синхронизировать событие с Google Calendar";
+      ? messages.planner.googleDisconnected
+      : messages.eventDetails.sync;
 
   const toggleCompleteMutation = useMutation({
     mutationFn: (item: PlannerOccurrence) =>
@@ -124,37 +126,37 @@ export function PlannerPage() {
         <div className="grid gap-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <div className="text-sm uppercase tracking-[0.2em] text-slate-500">Weekly planner</div>
-              <h2 className="text-3xl font-semibold text-ink">{formatWeekRange(weekDate)}</h2>
+              <div className="text-sm uppercase tracking-[0.2em] text-slate-500">{messages.planner.title}</div>
+              <h2 className="text-3xl font-semibold text-ink">{formatWeekRange(weekDate, language)}</h2>
             </div>
             <div className="flex flex-wrap gap-3">
               <Button variant="secondary" onClick={() => startTransition(() => setWeekDate((current) => subDays(current, 7)))}>
-                Предыдущая неделя
+                {messages.planner.previousWeek}
               </Button>
               <Button variant="secondary" onClick={() => startTransition(() => setWeekDate((current) => addDays(current, 7)))}>
-                Следующая неделя
+                {messages.planner.nextWeek}
               </Button>
               <Button className="gap-2" onClick={() => setItemModalState({ mode: "create" })}>
                 <Plus className="size-4" />
-                Создать
+                {messages.planner.create}
               </Button>
             </div>
           </div>
           <div className="grid gap-3 md:grid-cols-4">
             <div className="rounded-3xl bg-sand px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Всего</div>
+              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{messages.planner.statsTotal}</div>
               <div className="mt-2 text-2xl font-semibold text-ink">{stats.total}</div>
             </div>
             <div className="rounded-3xl bg-sand px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Задачи</div>
+              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{messages.planner.statsTasks}</div>
               <div className="mt-2 text-2xl font-semibold text-ink">{stats.tasks}</div>
             </div>
             <div className="rounded-3xl bg-sand px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">События</div>
+              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{messages.planner.statsEvents}</div>
               <div className="mt-2 text-2xl font-semibold text-ink">{stats.events}</div>
             </div>
             <div className="rounded-3xl bg-sand px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Выполнено</div>
+              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{messages.planner.statsCompleted}</div>
               <div className="mt-2 text-2xl font-semibold text-ink">{stats.completed}</div>
             </div>
           </div>
@@ -164,35 +166,28 @@ export function PlannerPage() {
           <div className="rounded-[2rem] bg-mist/80 p-5">
             <div className="flex items-center gap-3 text-ink">
               <Wand2 className="size-5 text-coral" />
-              <div className="font-semibold">Manual-first режим</div>
+              <div className="font-semibold">{messages.planner.manualFirstTitle}</div>
             </div>
-            <p className="mt-3 text-sm text-slate-600">
-              Даже если Mistral или Google Calendar не настроены, весь основной flow остаётся доступным: ручное создание, повторения,
-              напоминания и недельный обзор.
-            </p>
+            <p className="mt-3 text-sm text-slate-600">{messages.planner.manualFirstDescription}</p>
           </div>
         </div>
       </section>
 
       {weekQuery.isLoading ? (
-        <div className="rounded-[2rem] bg-white/80 p-10 text-center text-slate-500 shadow-soft">Собираем неделю...</div>
+        <div className="rounded-[2rem] bg-white/80 p-10 text-center text-slate-500 shadow-soft">{messages.planner.loadingWeek}</div>
       ) : weekQuery.isError ? (
         <div className="rounded-[2rem] bg-white/80 p-10 text-center text-red-500 shadow-soft">{weekQuery.error.message}</div>
       ) : weekData ? (
         <div className="grid gap-4">
           {!googleStatusQuery.data?.configured ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              Google Calendar пока не настроен в `.env`, поэтому автоматическая синхронизация событий отключена.
-            </div>
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{messages.planner.googleMissing}</div>
           ) : !googleStatusQuery.data?.connected ? (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              Google Calendar ещё не подключён для этого аккаунта. После подключения события будут синхронизироваться автоматически.
-            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">{messages.planner.googleDisconnected}</div>
           ) : null}
 
           {syncMutation.isError ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {syncMutation.error.message}. Синхронизацию можно повторить прямо на карточке события или в окне деталей.
+              {syncMutation.error.message}. {messages.planner.syncErrorSuffix}
             </div>
           ) : null}
 
@@ -239,9 +234,9 @@ export function PlannerPage() {
 
       <ItemModal
         open={Boolean(itemModalState)}
-        title={itemModalState?.mode === "edit" ? "Редактировать запись" : "Создать запись"}
+        title={itemModalState?.mode === "edit" ? messages.planner.editItem : messages.planner.createItem}
         initialItem={itemModalState?.item}
-        submitLabel={itemModalState?.mode === "edit" ? "Сохранить изменения" : "Создать"}
+        submitLabel={itemModalState?.mode === "edit" ? messages.common.saveChanges : messages.common.create}
         onClose={() => setItemModalState(null)}
         onSubmit={async (payload) => {
           if (itemModalState?.mode === "edit" && itemModalState.item) {
