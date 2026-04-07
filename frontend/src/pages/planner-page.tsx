@@ -20,8 +20,8 @@ type ItemModalState = { mode: "create" | "edit"; item?: PlannerOccurrence } | nu
 export function PlannerPage() {
   const [weekDate, setWeekDate] = useState(() => getWeekStart(new Date()));
   const [itemModalState, setItemModalState] = useState<ItemModalState>(null);
-  const [selectedEvent, setSelectedEvent] = useState<PlannerOccurrence | null>(null);
-  const [deleteEventTarget, setDeleteEventTarget] = useState<PlannerOccurrence | null>(null);
+  const [selectedItem, setSelectedItem] = useState<PlannerOccurrence | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<PlannerOccurrence | null>(null);
   const weekKey = toApiDate(weekDate);
 
   const googleStatusQuery = useQuery({
@@ -58,8 +58,8 @@ export function PlannerPage() {
   const deleteMutation = useMutation({
     mutationFn: api.deleteItem,
     onSuccess: async () => {
-      setDeleteEventTarget(null);
-      setSelectedEvent(null);
+      setDeleteTarget(null);
+      setSelectedItem(null);
       await invalidatePlanner();
     },
   });
@@ -67,8 +67,8 @@ export function PlannerPage() {
   const deleteOccurrenceMutation = useMutation({
     mutationFn: ({ itemId, occurrenceDate }: { itemId: string; occurrenceDate: string }) => api.deleteItemOccurrence(itemId, occurrenceDate),
     onSuccess: async () => {
-      setDeleteEventTarget(null);
-      setSelectedEvent(null);
+      setDeleteTarget(null);
+      setSelectedItem(null);
       await invalidatePlanner();
     },
   });
@@ -76,7 +76,7 @@ export function PlannerPage() {
   const syncMutation = useMutation({
     mutationFn: api.googleSyncItem,
     onSuccess: async () => {
-      setSelectedEvent(null);
+      setSelectedItem(null);
       await invalidatePlanner();
     },
   });
@@ -108,14 +108,14 @@ export function PlannerPage() {
   const isDeletingEvent = deleteMutation.isPending || deleteOccurrenceMutation.isPending;
 
   const handleDeleteEvent = (scope: DeleteEventScope) => {
-    if (!deleteEventTarget) return;
+    if (!deleteTarget) return;
 
-    if (scope === "single" && deleteEventTarget.occurrence_date) {
-      deleteOccurrenceMutation.mutate({ itemId: deleteEventTarget.id, occurrenceDate: deleteEventTarget.occurrence_date });
+    if (scope === "single" && deleteTarget.occurrence_date) {
+      deleteOccurrenceMutation.mutate({ itemId: deleteTarget.id, occurrenceDate: deleteTarget.occurrence_date });
       return;
     }
 
-    deleteMutation.mutate(deleteEventTarget.id);
+    deleteMutation.mutate(deleteTarget.id);
   };
 
   return (
@@ -199,36 +199,38 @@ export function PlannerPage() {
           <WeeklyPlanner
             startOfWeek={weekData.start_of_week}
             items={weekData.items}
-            onOpenEvent={setSelectedEvent}
-            onEdit={(item) => setItemModalState({ mode: "edit", item })}
-            onDelete={(item) => deleteMutation.mutate(item.id)}
+            onOpenItem={setSelectedItem}
             onToggleComplete={(item) => toggleCompleteMutation.mutate(item)}
           />
         </div>
       ) : null}
 
       <EventDetailsModal
-        open={Boolean(selectedEvent)}
-        item={selectedEvent}
+        open={Boolean(selectedItem)}
+        item={selectedItem}
         syncEnabled={googleSyncEnabled}
         syncHint={googleSyncHint}
-        onClose={() => setSelectedEvent(null)}
+        onClose={() => setSelectedItem(null)}
         onEdit={(item) => {
-          setSelectedEvent(null);
+          setSelectedItem(null);
           setItemModalState({ mode: "edit", item });
         }}
         onDelete={(item) => {
-          setSelectedEvent(null);
-          setDeleteEventTarget(item);
+          setSelectedItem(null);
+          setDeleteTarget(item);
         }}
-        onRetrySync={(item) => syncMutation.mutate(item.id)}
+        onRetrySync={(item) => {
+          if (item.item_type === "event") {
+            syncMutation.mutate(item.id);
+          }
+        }}
       />
 
       <DeleteEventModal
-        open={Boolean(deleteEventTarget)}
-        item={deleteEventTarget}
+        open={Boolean(deleteTarget)}
+        item={deleteTarget}
         isDeleting={isDeletingEvent}
-        onClose={() => setDeleteEventTarget(null)}
+        onClose={() => setDeleteTarget(null)}
         onConfirm={handleDeleteEvent}
       />
 

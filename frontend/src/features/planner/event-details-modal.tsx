@@ -1,4 +1,4 @@
-import { CalendarSync, Clock3, Repeat, Trash2, X, Pencil } from "lucide-react";
+import { CalendarSync, CheckCircle2, Clock3, Pencil, Repeat, RotateCcw, Trash2, X } from "lucide-react";
 
 import { Button } from "../../components/ui/forms";
 import { formatDisplayDate } from "../../lib/utils/datetime";
@@ -35,12 +35,8 @@ function describeReminder(reminder: Reminder) {
   }
 
   const minutes = Math.abs(reminder.offset_minutes ?? 0);
-  if (minutes >= 1440) {
-    return `За ${Math.floor(minutes / 1440)} дн.`;
-  }
-  if (minutes >= 60) {
-    return `За ${Math.floor(minutes / 60)} ч.`;
-  }
+  if (minutes >= 1440) return `За ${Math.floor(minutes / 1440)} дн.`;
+  if (minutes >= 60) return `За ${Math.floor(minutes / 60)} ч.`;
   return `За ${minutes} мин.`;
 }
 
@@ -74,9 +70,11 @@ export function EventDetailsModal({
 }) {
   if (!open || !item) return null;
 
+  const isEvent = item.item_type === "event";
   const primaryDate = item.display_start_at ?? item.display_due_at ?? item.start_at ?? item.due_at;
   const secondaryDate = item.display_end_at ?? item.end_at;
   const syncStatus = item.sync_status ?? "not_synced";
+  const statusLabel = item.completed_for_occurrence || item.status === "completed" ? "Выполнено" : item.status;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-sm">
@@ -91,12 +89,20 @@ export function EventDetailsModal({
                 {item.item_type}
               </span>
               {item.is_recurring ? <Repeat className="size-4 text-slate-400" /> : null}
-              <span className="text-xs uppercase tracking-[0.16em] text-slate-400">{syncStatus}</span>
+              {!isEvent && (
+                <span className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.16em] text-slate-400">
+                  <CheckCircle2 className="size-3.5" />
+                  {statusLabel}
+                </span>
+              )}
+              {isEvent ? <span className="text-xs uppercase tracking-[0.16em] text-slate-400">{syncStatus}</span> : null}
             </div>
             <div>
               <h2 className="text-2xl font-semibold text-ink">{item.title}</h2>
               <p className="mt-2 text-sm text-slate-500">
-                Здесь показана полная информация о событии. Редактирование и удаление перенесены в это окно.
+                {isEvent
+                  ? "Здесь показана полная информация о событии. Редактирование и удаление перенесены в это окно."
+                  : "Здесь показана полная информация о задаче. Редактирование и удаление перенесены в это окно."}
               </p>
             </div>
           </div>
@@ -106,8 +112,8 @@ export function EventDetailsModal({
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
-          <DetailRow label="Дата и время" value={primaryDate ? formatDisplayDate(primaryDate) : "Без даты"} />
-          <DetailRow label="Окончание" value={secondaryDate ? formatDisplayDate(secondaryDate) : "Не указано"} />
+          <DetailRow label={isEvent ? "Дата и время" : "Срок"} value={primaryDate ? formatDisplayDate(primaryDate) : "Без даты"} />
+          <DetailRow label={isEvent ? "Окончание" : "Статус"} value={isEvent ? (secondaryDate ? formatDisplayDate(secondaryDate) : "Не указано") : statusLabel} />
           <DetailRow label="Весь день" value={item.all_day ? "Да" : "Нет"} />
           <DetailRow label="Повторение" value={describeRecurrence(item)} />
         </div>
@@ -133,9 +139,11 @@ export function EventDetailsModal({
           </div>
         </div>
 
-        {item.is_recurring && item.sync_status ? (
+        {item.is_recurring ? (
           <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-            Удаление одного показа повторяющегося события работает локально в PlanSync и не меняет серию в Google Calendar.
+            {isEvent && item.sync_status
+              ? "Удаление одного показа работает локально в PlanSync и не меняет серию в Google Calendar."
+              : "Для повторяющейся записи можно удалить только выбранное вхождение или всю серию целиком."}
           </div>
         ) : null}
 
@@ -144,7 +152,7 @@ export function EventDetailsModal({
             <Pencil className="size-4" />
             Редактировать
           </Button>
-          {item.sync_status === "failed" ? (
+          {isEvent && item.sync_status === "failed" ? (
             <Button variant="secondary" className="gap-2" onClick={() => onRetrySync(item)} disabled={!syncEnabled} title={syncHint}>
               <CalendarSync className="size-4" />
               Повторить синхронизацию
@@ -154,7 +162,8 @@ export function EventDetailsModal({
             <Trash2 className="size-4" />
             Удалить
           </Button>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" className="gap-2" onClick={onClose}>
+            <RotateCcw className="size-4" />
             Закрыть
           </Button>
         </div>

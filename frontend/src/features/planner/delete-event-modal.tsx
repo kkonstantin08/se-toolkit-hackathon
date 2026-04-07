@@ -21,6 +21,9 @@ export function DeleteEventModal({
   if (!open || !item) return null;
 
   const canDeleteSingleOccurrence = item.is_recurring && Boolean(item.occurrence_date);
+  const isEvent = item.item_type === "event";
+  const entityLabel = isEvent ? "событие" : "задачу";
+  const seriesLabel = isEvent ? "всю серию" : "всю серию";
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm">
@@ -32,11 +35,11 @@ export function DeleteEventModal({
             </span>
             <div>
               <h2 className="text-xl font-semibold text-ink">
-                {canDeleteSingleOccurrence ? "Удалить только это событие или всю серию?" : "Удалить событие?"}
+                {canDeleteSingleOccurrence ? `Удалить только это ${isEvent ? "событие" : "вхождение задачи"} или всю серию?` : `Удалить ${entityLabel}?`}
               </h2>
               <p className="mt-2 text-sm text-slate-500">
                 {canDeleteSingleOccurrence
-                  ? "Можно скрыть только выбранный показ в PlanSync или удалить всю серию целиком."
+                  ? "Можно скрыть только выбранное вхождение в PlanSync или удалить всю серию целиком."
                   : "Это действие нельзя отменить."}
               </p>
             </div>
@@ -46,7 +49,7 @@ export function DeleteEventModal({
           </Button>
         </div>
 
-        {canDeleteSingleOccurrence && item.sync_status ? (
+        {canDeleteSingleOccurrence && isEvent && item.sync_status ? (
           <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
             Удаление одного показа влияет только на PlanSync. Серия в Google Calendar останется без изменений.
           </div>
@@ -59,12 +62,12 @@ export function DeleteEventModal({
           {canDeleteSingleOccurrence ? (
             <Button variant="secondary" className="gap-2" onClick={() => onConfirm("single")} disabled={isDeleting}>
               <Trash2 className="size-4" />
-              Удалить это событие
+              {isEvent ? "Удалить это событие" : "Удалить это вхождение"}
             </Button>
           ) : null}
           <Button variant="danger" className="gap-2" onClick={() => onConfirm(canDeleteSingleOccurrence ? "series" : "single_item")} disabled={isDeleting}>
             <Trash2 className="size-4" />
-            {canDeleteSingleOccurrence ? "Удалить всю серию" : "Удалить событие"}
+            {canDeleteSingleOccurrence ? `Удалить ${seriesLabel}` : `Удалить ${entityLabel}`}
           </Button>
         </div>
       </div>
