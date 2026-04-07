@@ -86,7 +86,7 @@ export function PlannerPage() {
     ? "Google Calendar не настроен в .env"
     : !googleStatusQuery.data?.connected
       ? "Сначала подключите Google Calendar на странице интеграций"
-      : "Повторить синхронизацию события с Google Calendar";
+      : "Синхронизировать событие с Google Calendar";
 
   const toggleCompleteMutation = useMutation({
     mutationFn: (item: PlannerOccurrence) =>
@@ -192,7 +192,7 @@ export function PlannerPage() {
 
           {syncMutation.isError ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {syncMutation.error.message}. Для событий со статусом `failed` доступна кнопка повторной синхронизации в окне деталей.
+              {syncMutation.error.message}. Синхронизацию можно повторить прямо на карточке события или в окне деталей.
             </div>
           ) : null}
 
@@ -201,6 +201,9 @@ export function PlannerPage() {
             items={weekData.items}
             onOpenItem={setSelectedItem}
             onToggleComplete={(item) => toggleCompleteMutation.mutate(item)}
+            onSync={(item) => syncMutation.mutate(item.id)}
+            googleSyncEnabled={googleSyncEnabled}
+            googleSyncHint={googleSyncHint}
           />
         </div>
       ) : null}

@@ -89,13 +89,14 @@ export function EventDetailsModal({
                 {item.item_type}
               </span>
               {item.is_recurring ? <Repeat className="size-4 text-slate-400" /> : null}
-              {!isEvent && (
+              {!isEvent ? (
                 <span className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.16em] text-slate-400">
                   <CheckCircle2 className="size-3.5" />
                   {statusLabel}
                 </span>
+              ) : (
+                <span className="text-xs uppercase tracking-[0.16em] text-slate-400">{syncStatus}</span>
               )}
-              {isEvent ? <span className="text-xs uppercase tracking-[0.16em] text-slate-400">{syncStatus}</span> : null}
             </div>
             <div>
               <h2 className="text-2xl font-semibold text-ink">{item.title}</h2>
@@ -152,10 +153,10 @@ export function EventDetailsModal({
             <Pencil className="size-4" />
             Редактировать
           </Button>
-          {isEvent && item.sync_status === "failed" ? (
+          {isEvent ? (
             <Button variant="secondary" className="gap-2" onClick={() => onRetrySync(item)} disabled={!syncEnabled} title={syncHint}>
               <CalendarSync className="size-4" />
-              Повторить синхронизацию
+              Синхронизировать
             </Button>
           ) : null}
           <Button variant="ghost" className="gap-2 text-red-500" onClick={() => onDelete(item)}>
