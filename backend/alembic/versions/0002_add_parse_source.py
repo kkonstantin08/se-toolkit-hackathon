@@ -18,6 +18,12 @@ depends_on = None
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_columns = {column["name"] for column in inspector.get_columns("parsed_drafts")}
+    if "parse_source" in existing_columns:
+        return
+
     op.add_column(
         "parsed_drafts",
         sa.Column("parse_source", sa.String(length=32), nullable=False, server_default="fallback"),
@@ -26,5 +32,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_columns = {column["name"] for column in inspector.get_columns("parsed_drafts")}
+    if "parse_source" not in existing_columns:
+        return
+
     op.drop_column("parsed_drafts", "parse_source")
 
