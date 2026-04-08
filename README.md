@@ -7,6 +7,10 @@ Full-stack study planner that combines tasks, events, reminders, recurring routi
 Current product visual:
 
 ![PlanSync product preview](frontend/src/assets/hero.png)
+![Sign In](assets/sign_in.png)
+![Main Page](assets/main_page.png)
+![Google Calendar Integration](assets/google_integration.png)
+![AI Draft Preview](assets/ai_preview.png)
 
 Recommended extra screenshot for final submission:
 
