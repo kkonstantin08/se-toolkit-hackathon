@@ -1,6 +1,8 @@
 import clsx from "clsx";
+import { Eye, EyeOff } from "lucide-react";
 import {
   forwardRef,
+  useState,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type PropsWithChildren,
@@ -30,6 +32,35 @@ export function Button({
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(props, ref) {
   return <input ref={ref} {...props} className={clsx("field-input", props.className)} />;
+});
+
+type PasswordInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
+  hidePasswordLabel: string;
+  showPasswordLabel: string;
+};
+
+export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(function PasswordInput(
+  { className, hidePasswordLabel, showPasswordLabel, ...props },
+  ref,
+) {
+  const [isVisible, setIsVisible] = useState(false);
+  const toggleLabel = isVisible ? hidePasswordLabel : showPasswordLabel;
+  const Icon = isVisible ? EyeOff : Eye;
+
+  return (
+    <div className="relative">
+      <input ref={ref} {...props} type={isVisible ? "text" : "password"} className={clsx("field-input pr-12", className)} />
+      <button
+        type="button"
+        aria-label={toggleLabel}
+        title={toggleLabel}
+        className="absolute inset-y-0 right-3 inline-flex items-center justify-center text-slate-500 transition hover:text-slate-700 focus:outline-none"
+        onClick={() => setIsVisible((visible) => !visible)}
+      >
+        <Icon className="size-5" />
+      </button>
+    </div>
+  );
 });
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea(props, ref) {

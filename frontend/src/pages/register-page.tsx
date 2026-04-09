@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 import { LanguageToggle } from "../components/ui/language-toggle";
-import { Button, Field, Input, Select } from "../components/ui/forms";
+import { Button, Field, Input, PasswordInput, Select } from "../components/ui/forms";
 import { useRegister } from "../features/auth/use-auth";
 import { useI18n } from "../lib/i18n";
 import { getTimezoneOptions } from "../lib/utils/timezones";
@@ -19,24 +19,45 @@ export function RegisterPage() {
 
   const registerSchema = useMemo(
     () =>
-      z.object({
-        full_name: z.string().min(2, messages.register.nameError),
-        email: z.string().email(messages.register.emailError),
-        password: z.string().min(8, messages.register.passwordError),
-        timezone: z.string().min(2, messages.register.timezoneError),
-      }),
+      z
+        .object({
+          full_name: z.string().min(2, messages.register.nameError),
+          email: z.string().email(messages.register.emailError),
+          password: z.string().min(8, messages.register.passwordError),
+          confirm_password: z.string().min(1, messages.register.confirmPasswordError),
+          timezone: z.string().min(2, messages.register.timezoneError),
+        })
+        .superRefine((values, context) => {
+          if (values.confirm_password !== values.password) {
+            context.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: messages.register.passwordMismatch,
+              path: ["confirm_password"],
+            });
+          }
+        }),
     [messages.register],
   );
 
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
+    mode: "onTouched",
+    reValidateMode: "onChange",
     defaultValues: {
       full_name: "",
       email: "",
       password: "",
+      confirm_password: "",
       timezone: detectedTimezone,
     },
   });
+  const confirmPasswordValue = form.watch("confirm_password");
+  const passwordValue = form.watch("password");
+  const showConfirmMismatch =
+    (form.formState.touchedFields.confirm_password || confirmPasswordValue.length > 0) &&
+    confirmPasswordValue.length > 0 &&
+    confirmPasswordValue !== passwordValue &&
+    !form.formState.errors.confirm_password;
 
   return (
     <div className="relative grid min-h-screen place-items-center bg-[linear-gradient(180deg,_#eff6ff_0%,_#fefcf8_100%)] p-6">
@@ -54,7 +75,13 @@ export function RegisterPage() {
           className="grid gap-4"
           onSubmit={form.handleSubmit(
             async (values) => {
-              await register.mutateAsync(values);
+              const payload = {
+                email: values.email,
+                password: values.password,
+                full_name: values.full_name,
+                timezone: values.timezone,
+              };
+              await register.mutateAsync(payload);
               navigate("/planner", { replace: true });
             },
             (errors) => {
@@ -71,8 +98,23 @@ export function RegisterPage() {
             {form.formState.errors.email ? <span className="text-sm text-red-500">{form.formState.errors.email.message}</span> : null}
           </Field>
           <Field label={messages.register.password}>
-            <Input type="password" {...form.register("password")} />
+            <PasswordInput
+              {...form.register("password")}
+              hidePasswordLabel={messages.common.hidePassword}
+              showPasswordLabel={messages.common.showPassword}
+            />
             {form.formState.errors.password ? <span className="text-sm text-red-500">{form.formState.errors.password.message}</span> : null}
+          </Field>
+          <Field label={messages.register.confirmPassword}>
+            <PasswordInput
+              {...form.register("confirm_password")}
+              hidePasswordLabel={messages.common.hidePassword}
+              showPasswordLabel={messages.common.showPassword}
+            />
+            {form.formState.errors.confirm_password ? (
+              <span className="text-sm text-red-500">{form.formState.errors.confirm_password.message}</span>
+            ) : null}
+            {showConfirmMismatch ? <span className="text-sm text-red-500">{messages.register.passwordMismatch}</span> : null}
           </Field>
           <Field label={messages.register.timezone} hint={messages.register.timezoneHint}>
             <Select {...form.register("timezone")}>

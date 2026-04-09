@@ -33,6 +33,8 @@ const messages = {
       inApp: "In-app",
       active: "Active",
       current: "current",
+      showPassword: "Show password",
+      hidePassword: "Hide password",
       itemTypes: {
         task: "Task",
         event: "Event",
@@ -91,6 +93,7 @@ const messages = {
         "The demo account already exists: student@example.com / password123. If you want to create a new user, enter a different email.",
       name: "Name",
       password: "Password",
+      confirmPassword: "Confirm password",
       timezone: "Timezone",
       timezoneHint: "Uses the IANA format, for example Europe/Moscow or America/New_York.",
       create: "Register",
@@ -100,6 +103,8 @@ const messages = {
       nameError: "Minimum 2 characters",
       emailError: "Enter a valid email",
       passwordError: "Minimum 8 characters",
+      confirmPasswordError: "Confirm your password",
+      passwordMismatch: "Passwords do not match",
       timezoneError: "Choose a timezone",
     },
     planner: {
@@ -298,6 +303,8 @@ const messages = {
       inApp: "In-app",
       active: "Активно",
       current: "текущий",
+      showPassword: "Показать пароль",
+      hidePassword: "Скрыть пароль",
       itemTypes: {
         task: "Задача",
         event: "Событие",
@@ -356,6 +363,7 @@ const messages = {
         "Demo-аккаунт уже существует: student@example.com / password123. Если хотите создать нового пользователя, введите другой email.",
       name: "Имя",
       password: "Пароль",
+      confirmPassword: "Повторите пароль",
       timezone: "Часовой пояс",
       timezoneHint: "Используется IANA-формат, например Europe/Moscow или America/New_York.",
       create: "Зарегистрироваться",
@@ -365,6 +373,8 @@ const messages = {
       nameError: "Минимум 2 символа",
       emailError: "Введите корректный email",
       passwordError: "Минимум 8 символов",
+      confirmPasswordError: "Повторно введите пароль",
+      passwordMismatch: "Пароли не совпадают",
       timezoneError: "Выберите часовой пояс",
     },
     planner: {

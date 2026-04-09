@@ -5,7 +5,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 import { LanguageToggle } from "../components/ui/language-toggle";
-import { Button, Field, Input } from "../components/ui/forms";
+import { Button, Field, Input, PasswordInput } from "../components/ui/forms";
 import { useLogin } from "../features/auth/use-auth";
 import { useI18n } from "../lib/i18n";
 
@@ -102,7 +102,11 @@ export function LoginPage() {
             </Field>
 
             <Field label={messages.login.password}>
-              <Input type="password" {...form.register("password")} />
+              <PasswordInput
+                {...form.register("password")}
+                hidePasswordLabel={messages.common.hidePassword}
+                showPasswordLabel={messages.common.showPassword}
+              />
               {form.formState.errors.password ? <span className="text-sm text-red-500">{form.formState.errors.password.message}</span> : null}
             </Field>
 
