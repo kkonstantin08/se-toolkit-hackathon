@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 import { LanguageToggle } from "../components/ui/language-toggle";
@@ -14,8 +14,10 @@ const DEMO_PASSWORD = "password123";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const login = useLogin();
   const { messages } = useI18n();
+  const destination = (location.state as { from?: string } | null)?.from ?? "/planner";
 
   const loginSchema = useMemo(
     () =>
@@ -36,7 +38,7 @@ export function LoginPage() {
 
   const submitLogin = async (values: z.infer<typeof loginSchema>) => {
     await login.mutateAsync(values);
-    navigate("/planner");
+    navigate(destination, { replace: true });
   };
 
   return (
@@ -85,9 +87,14 @@ export function LoginPage() {
 
           <form
             className="grid gap-4"
-            onSubmit={form.handleSubmit(async (values) => {
-              await submitLogin(values);
-            })}
+            onSubmit={form.handleSubmit(
+              async (values) => {
+                await submitLogin(values);
+              },
+              (errors) => {
+                console.error("[auth] login validation failed", errors);
+              },
+            )}
           >
             <Field label="Email">
               <Input placeholder={DEMO_EMAIL} {...form.register("email")} />

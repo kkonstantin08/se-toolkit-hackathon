@@ -1,5 +1,12 @@
 import clsx from "clsx";
-import type { ButtonHTMLAttributes, InputHTMLAttributes, PropsWithChildren, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import {
+  forwardRef,
+  type ButtonHTMLAttributes,
+  type InputHTMLAttributes,
+  type PropsWithChildren,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+} from "react";
 
 export function Button({
   className,
@@ -21,17 +28,17 @@ export function Button({
   );
 }
 
-export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={clsx("field-input", props.className)} />;
-}
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(props, ref) {
+  return <input ref={ref} {...props} className={clsx("field-input", props.className)} />;
+});
 
-export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className={clsx("field-input min-h-28 resize-y", props.className)} />;
-}
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea(props, ref) {
+  return <textarea ref={ref} {...props} className={clsx("field-input min-h-28 resize-y", props.className)} />;
+});
 
-export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className={clsx("field-input", props.className)} />;
-}
+export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(function Select(props, ref) {
+  return <select ref={ref} {...props} className={clsx("field-input", props.className)} />;
+});
 
 export function Field({ label, hint, children }: PropsWithChildren<{ label: string; hint?: string }>) {
   return (
@@ -51,4 +58,3 @@ export function SectionTitle({ title, description }: { title: string; descriptio
     </div>
   );
 }
-

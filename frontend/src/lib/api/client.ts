@@ -10,6 +10,14 @@ import type {
 } from "../../types/api";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
+const AUTH_RETRY_EXCLUDED_PATHS = new Set([
+  "/auth/login",
+  "/auth/register",
+  "/auth/logout",
+  "/auth/refresh",
+]);
+
+let refreshPromise: Promise<boolean> | null = null;
 
 export class ApiError extends Error {
   status: number;
@@ -22,18 +30,25 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+function buildRequestInit(options: RequestInit = {}): RequestInit {
+  return {
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(options.headers ?? {}),
     },
     ...options,
-  });
+  };
+}
 
+async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
+    console.error("[api] request failed", {
+      url: response.url,
+      status: response.status,
+      detail: body.detail ?? "Unexpected API error",
+    });
     throw new ApiError(response.status, body.detail ?? "Unexpected API error");
   }
 
@@ -42,6 +57,53 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   return (await response.json()) as T;
+}
+
+async function refreshSession(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        console.warn("[api] refresh failed", {
+          url: response.url,
+          status: response.status,
+          detail: body.detail ?? "Unexpected API error",
+        });
+        return false;
+      }
+
+      await response.json().catch(() => undefined);
+      return true;
+    })();
+  }
+
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
+}
+
+async function request<T>(path: string, options: RequestInit = {}, allowAuthRetry = true): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, buildRequestInit(options));
+
+  if (response.status === 401 && allowAuthRetry && !AUTH_RETRY_EXCLUDED_PATHS.has(path)) {
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      const retryResponse = await fetch(`${API_BASE_URL}${path}`, buildRequestInit(options));
+      return parseResponse<T>(retryResponse);
+    }
+  }
+
+  return parseResponse<T>(response);
 }
 
 export const api = {

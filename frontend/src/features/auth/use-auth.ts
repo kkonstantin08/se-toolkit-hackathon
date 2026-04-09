@@ -14,13 +14,18 @@ export function useCurrentUser() {
 export function useLogin() {
   return useMutation({
     mutationFn: api.login,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
+    onSuccess: (user) => {
+      queryClient.setQueryData(["me"], user);
+    },
   });
 }
 
 export function useRegister() {
   return useMutation({
     mutationFn: api.register,
+    onSuccess: (user) => {
+      queryClient.setQueryData(["me"], user);
+    },
   });
 }
 

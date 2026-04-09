@@ -6,10 +6,10 @@ import { isUnauthorized, useCurrentUser } from "./use-auth";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const location = useLocation();
-  const { data, isLoading, error } = useCurrentUser();
+  const { data, isLoading, isFetching, error } = useCurrentUser();
   const { messages } = useI18n();
 
-  if (isLoading) {
+  if (isLoading || (isFetching && !data)) {
     return <div className="grid min-h-screen place-items-center bg-sand text-slate-500">{messages.auth.loadingWorkspace}</div>;
   }
 

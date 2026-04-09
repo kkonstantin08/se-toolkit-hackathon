@@ -52,19 +52,27 @@ export function RegisterPage() {
         <div className="mb-6 rounded-2xl bg-mist/70 px-4 py-3 text-sm text-slate-600">{messages.register.demoHint}</div>
         <form
           className="grid gap-4"
-          onSubmit={form.handleSubmit(async (values) => {
-            await register.mutateAsync(values);
-            navigate("/login");
-          })}
+          onSubmit={form.handleSubmit(
+            async (values) => {
+              await register.mutateAsync(values);
+              navigate("/planner", { replace: true });
+            },
+            (errors) => {
+              console.error("[auth] register validation failed", errors);
+            },
+          )}
         >
           <Field label={messages.register.name}>
             <Input {...form.register("full_name")} />
+            {form.formState.errors.full_name ? <span className="text-sm text-red-500">{form.formState.errors.full_name.message}</span> : null}
           </Field>
           <Field label="Email">
             <Input {...form.register("email")} />
+            {form.formState.errors.email ? <span className="text-sm text-red-500">{form.formState.errors.email.message}</span> : null}
           </Field>
           <Field label={messages.register.password}>
             <Input type="password" {...form.register("password")} />
+            {form.formState.errors.password ? <span className="text-sm text-red-500">{form.formState.errors.password.message}</span> : null}
           </Field>
           <Field label={messages.register.timezone} hint={messages.register.timezoneHint}>
             <Select {...form.register("timezone")}>
@@ -74,6 +82,7 @@ export function RegisterPage() {
                 </option>
               ))}
             </Select>
+            {form.formState.errors.timezone ? <span className="text-sm text-red-500">{form.formState.errors.timezone.message}</span> : null}
           </Field>
           {register.isError ? <p className="text-sm text-red-500">{register.error.message}</p> : null}
           <Button type="submit" disabled={register.isPending}>

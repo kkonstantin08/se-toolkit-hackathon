@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, Response, status
 from sqlalchemy import select
@@ -22,6 +22,12 @@ from app.schemas.auth import LoginRequest, RegisterRequest
 
 ACCESS_COOKIE = "plansync_access_token"
 REFRESH_COOKIE = "plansync_refresh_token"
+
+
+def _coerce_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 def _set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
@@ -117,7 +123,7 @@ def rotate_refresh_session(db: Session, response: Response, refresh_token: str |
     if payload.get("type") != "refresh":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
     session = db.get(AuthSession, payload.get("sid"))
-    if session is None or session.revoked_at is not None or session.expires_at <= utc_now():
+    if session is None or session.revoked_at is not None or _coerce_utc(session.expires_at) <= utc_now():
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired")
     if session.refresh_token_hash != token_hash(refresh_token):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session mismatch")

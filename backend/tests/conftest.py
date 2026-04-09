@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 os.environ["DATABASE_URL"] = "sqlite:///./test.db"
 os.environ["SECRET_KEY"] = "tests-secret-key-with-sufficient-length-123456"
+os.environ["SEED_DEMO_USER"] = "false"
 
 from app.api.v1.deps import get_db  # noqa: E402
 from app.db.base import Base  # noqa: E402
